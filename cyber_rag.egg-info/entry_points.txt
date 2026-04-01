@@ -1,0 +1,4 @@
+[console_scripts]
+cyber-rag-build-index = cyber_rag.cli.build_index:main
+cyber-rag-eval = cyber_rag.cli.run_eval:main
+cyber-rag-query = cyber_rag.cli.run_query:main
