@@ -1,3 +1,29 @@
+Metadata-Version: 2.4
+Name: cyber-rag
+Version: 0.1.0
+Summary: CyberRAG retrieval evaluation framework for cybersecurity experiments.
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+Requires-Dist: langchain<0.4,>=0.3
+Requires-Dist: langchain-community<0.4,>=0.3
+Requires-Dist: langchain-text-splitters<0.4,>=0.3
+Requires-Dist: langchain-openai<0.4,>=0.3
+Requires-Dist: langchain-huggingface<0.4,>=0.3
+Requires-Dist: langsmith<0.5,>=0.3
+Requires-Dist: faiss-cpu>=1.8
+Requires-Dist: sentence-transformers>=3.0
+Requires-Dist: pypdf>=5.0
+Requires-Dist: pymupdf>=1.24
+Requires-Dist: beautifulsoup4>=4.12
+Requires-Dist: lxml>=5.0
+Requires-Dist: markdown>=3.6
+Requires-Dist: pandas>=2.2
+Requires-Dist: python-dotenv>=1.0
+Requires-Dist: ragas>=0.2
+Requires-Dist: datasets>=3.0
+Requires-Dist: pytest>=8.0
+Requires-Dist: ruff>=0.6
+
 # CyberRAG
 
 CyberRAG is an original course project for evaluating retrieval-augmented generation on cybersecurity knowledge questions and CTF-style tasks.
@@ -68,22 +94,17 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-## Runtime credentials
+## Optional environment variables
 
-Copy the template and fill in only the API key and endpoint used for answer generation:
-
-```bash
-cp .env.example .env
-```
-
-`.env` should contain only these two values:
+If you use hosted model providers or tracing, set the corresponding variables before running answer generation or evaluations.
 
 ```bash
-CYBER_RAG_LLM_API_KEY=your_api_key
-CYBER_RAG_LLM_BASE_URL=https://your-llm-endpoint/v1
+export OPENAI_API_KEY=your_api_key
+export LANGSMITH_TRACING=true
+export LANGSMITH_API_KEY=your_langsmith_api_key
+export CYBER_RAG_LLM_MODEL=gpt-4o-mini
+export CYBER_RAG_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
 ```
-
-Model selection, temperature, retrieval defaults, and embedding settings are defined in `cyber_rag/config.py`.
 
 ## Development commands
 

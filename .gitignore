@@ -1,2 +1,5 @@
 .workbuddy
 CODEBUDDY.md
+.vscode
+.env
+*.pyc
