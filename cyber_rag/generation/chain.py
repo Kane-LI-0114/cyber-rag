@@ -10,6 +10,7 @@ from langchain_openai import AzureChatOpenAI
 from cyber_rag.config import ENV_PATH, EmbeddingConfig, GenerationConfig, RetrievalConfig
 from cyber_rag.retrieval.retriever import retrieve_documents
 from cyber_rag.schemas import AnswerResult, ChunkReference
+import re
 
 
 _SYSTEM_PROMPT = """You are the answer generation layer for CyberRAG.
@@ -101,12 +102,69 @@ def _to_chunk_references(documents: list[Document]) -> list[ChunkReference]:
     return references
 
 
+
+# keep your existing imports here
+
+
+_MC_HUMAN_PROMPT = """Use the provided context to answer the multiple-choice question.
+
+Context:
+{context}
+
+Question:
+{question}
+
+Reply with only one letter from the available choices.
+"""
+
+_MC_BASELINE_PROMPT = """Answer the multiple-choice question.
+
+Question:
+{question}
+
+Reply with only one letter from the available choices.
+"""
+
+
+def _format_question(question: str, answer_options: dict[str, str] | None = None) -> str:
+    if not answer_options:
+        return question
+
+    lines = [question, "", "Choices:"]
+    for key, value in answer_options.items():
+        lines.append(f"{key}. {value}")
+    return "\n".join(lines)
+
+
+def _normalize_answer(
+    raw_answer: str,
+    answer_options: dict[str, str] | None = None,
+) -> str:
+    text = str(raw_answer).strip()
+
+    if not answer_options:
+        return text
+
+    valid_choices = {str(k).strip().upper() for k in answer_options.keys()}
+    upper_text = text.upper()
+
+    if upper_text in valid_choices:
+        return upper_text
+
+    match = re.search(r"\b([A-Z])\b", upper_text)
+    if match and match.group(1) in valid_choices:
+        return match.group(1)
+
+    return upper_text
+
+
 def answer_with_retrieval(
     question: str,
     index_path: str | Path,
     embedding_config: EmbeddingConfig | None = None,
     retrieval_config: RetrievalConfig | None = None,
     generation_config: GenerationConfig | None = None,
+    answer_options: dict[str, str] | None = None,
 ) -> AnswerResult:
     documents = retrieve_documents(
         query=question,
@@ -114,16 +172,30 @@ def answer_with_retrieval(
         embedding_config=embedding_config,
         retrieval_config=retrieval_config,
     )
+
+    is_mcq = bool(answer_options)
     prompt = ChatPromptTemplate.from_messages(
-        [("system", _SYSTEM_PROMPT), ("human", _HUMAN_PROMPT)]
+        [
+            ("system", _SYSTEM_PROMPT),
+            ("human", _MC_HUMAN_PROMPT if is_mcq else _HUMAN_PROMPT),
+        ]
     )
+
     llm = _build_llm(generation_config)
+    formatted_question = _format_question(question, answer_options)
+
     response = llm.invoke(
-        prompt.format_messages(context=_format_context(documents), question=question)
+        prompt.format_messages(
+            context=_format_context(documents),
+            question=formatted_question,
+        )
     )
+
+    normalized_answer = _normalize_answer(str(response.content), answer_options)
+
     return AnswerResult(
         question=question,
-        answer=str(response.content),
+        answer=normalized_answer,
         sources=_to_chunk_references(documents),
     )
 
@@ -131,10 +203,24 @@ def answer_with_retrieval(
 def answer_without_retrieval(
     question: str,
     generation_config: GenerationConfig | None = None,
+    answer_options: dict[str, str] | None = None,
 ) -> AnswerResult:
+    is_mcq = bool(answer_options)
     prompt = ChatPromptTemplate.from_messages(
-        [("system", _SYSTEM_PROMPT), ("human", _BASELINE_PROMPT)]
+        [
+            ("system", _SYSTEM_PROMPT),
+            ("human", _MC_BASELINE_PROMPT if is_mcq else _BASELINE_PROMPT),
+        ]
     )
+
     llm = _build_llm(generation_config)
-    response = llm.invoke(prompt.format_messages(question=question))
-    return AnswerResult(question=question, answer=str(response.content), sources=[])
+    formatted_question = _format_question(question, answer_options)
+
+    response = llm.invoke(prompt.format_messages(question=formatted_question))
+    normalized_answer = _normalize_answer(str(response.content), answer_options)
+
+    return AnswerResult(
+        question=question,
+        answer=normalized_answer,
+        sources=[],
+    )
