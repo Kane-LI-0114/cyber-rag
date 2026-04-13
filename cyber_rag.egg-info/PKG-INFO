@@ -94,17 +94,22 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-## Optional environment variables
+## Runtime credentials
 
-If you use hosted model providers or tracing, set the corresponding variables before running answer generation or evaluations.
+Copy the template and fill in only the API key and endpoint used for answer generation:
 
 ```bash
-export OPENAI_API_KEY=your_api_key
-export LANGSMITH_TRACING=true
-export LANGSMITH_API_KEY=your_langsmith_api_key
-export CYBER_RAG_LLM_MODEL=gpt-4o-mini
-export CYBER_RAG_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+cp .env.example .env
 ```
+
+`.env` should contain only these two values:
+
+```bash
+CYBER_RAG_LLM_API_KEY=your_api_key
+CYBER_RAG_LLM_BASE_URL=https://your-llm-endpoint/v1
+```
+
+Model selection, temperature, retrieval defaults, and embedding settings are defined in `cyber_rag/config.py`.
 
 ## Development commands
 

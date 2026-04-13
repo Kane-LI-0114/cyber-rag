@@ -50,8 +50,8 @@ class RetrievalConfig:
 
 @dataclass(slots=True)
 class GenerationConfig:
-    provider: str = "openai"
-    model_name: str = "gpt-4o-mini"
+    provider: str = "azure"
+    model_name: str = "gpt-35-turbo"  # Azure deployment name
     temperature: float = 0.0
     api_key: str | None = field(
         default_factory=lambda: _read_env("CYBER_RAG_LLM_API_KEY")
@@ -59,8 +59,9 @@ class GenerationConfig:
     base_url: str | None = field(
         default_factory=lambda: _read_env("CYBER_RAG_LLM_BASE_URL")
     )
-
-
+    api_version: str | None = field(
+        default_factory=lambda: _read_env("CYBER_RAG_LLM_API_VERSION")
+    )
 def ensure_project_directories() -> None:
     for path in (RAW_DATA_DIR, INDEXES_DIR, EVALS_DIR):
         path.mkdir(parents=True, exist_ok=True)
