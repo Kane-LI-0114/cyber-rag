@@ -1,0 +1,1 @@
+{"question": "What is the primary requirement for an Random Bit Generator's (RBG) output to be used for generating cryptographic keys?", "answer": "The RBG's output should be computationally indistinguishable from random bits and provide sufficient entropy to support the security strength required for the target data"}
