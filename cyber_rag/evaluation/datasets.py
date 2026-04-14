@@ -20,14 +20,20 @@ def load_evaluation_examples(path: str | Path) -> list[EvaluationExample]:
                 if not line.strip():
                     continue
                 payload = json.loads(line)
+
+                # Fields with dedicated schema slots
+                _KNOWN = {"question", "answer", "answers", "solution"}
+
                 examples.append(
                     EvaluationExample(
                         question=payload["question"],
                         answer=payload.get("answer"),
+                        answers=payload.get("answers"),       # ← explicit MCQ choices
+                        solution=payload.get("solution"),     # ← explicit MCQ key
                         metadata={
                             key: value
                             for key, value in payload.items()
-                            if key not in {"question", "answer"}
+                            if key not in _KNOWN
                         },
                     )
                 )
@@ -39,6 +45,8 @@ def load_evaluation_examples(path: str | Path) -> list[EvaluationExample]:
             EvaluationExample(
                 question=str(row["question"]),
                 answer=None if pd.isna(row.get("answer")) else str(row.get("answer")),
+                answers=None,    # CSV format does not support MCQ choices
+                solution=None,
                 metadata={
                     column: row[column]
                     for column in frame.columns
