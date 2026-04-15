@@ -28,6 +28,11 @@ def parse_args() -> argparse.Namespace:
         default=str(DEFAULT_EVAL_PATH),
         help="CSV path for writing evaluation outputs.",
     )
+    parser.add_argument(
+        "--skip-ragas",
+        action="store_true",
+        help="Skip RAGAS metrics (LLM-heavy); still runs EM, token F1, and cosine for short answers.",
+    )
     return parser.parse_args()
 
 
@@ -40,6 +45,7 @@ def main() -> None:
         retrieval_config=RetrievalConfig(k=args.k),
         generation_config=GenerationConfig(model_name=args.model),
         limit=args.limit,
+        skip_ragas=args.skip_ragas,
     )
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
