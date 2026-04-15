@@ -70,31 +70,59 @@ python -m pip install -r requirements.txt
 
 ## Runtime credentials
 
-Copy the template and fill in only the API key and endpoint used for answer generation:
+Copy the template and fill in the Azure-compatible values used for answer generation:
 
 ```bash
 cp .env.example .env
 ```
 
-`.env` should contain only these two values:
+`.env` should contain these values:
 
 ```bash
 CYBER_RAG_LLM_API_KEY=your_api_key
-CYBER_RAG_LLM_BASE_URL=https://your-llm-endpoint/v1
+CYBER_RAG_LLM_PROVIDER=azure
+CYBER_RAG_LLM_MODEL_NAME=gpt-35-turbo
+CYBER_RAG_LLM_BASE_URL=https://hkust.azure-api.net
+CYBER_RAG_LLM_API_VERSION=2025-02-01-preview
 ```
 
-Model selection, temperature, retrieval defaults, and embedding settings are defined in `cyber_rag/config.py`.
+Additional runtime defaults are configured in `cyber_rag/config.py`, including:
+- chunking defaults (`chunk_size`, `chunk_overlap`)
+- embedding model and normalization settings
+- retrieval defaults (`k`, `search_type`)
+- generation defaults (provider, model name, temperature)
 
 ## Development commands
 
-```bash
-ruff check cyber_rag scripts tests
-pytest
-pytest tests/test_chunking.py
-python -m cyber_rag.cli.build_index data/raw --index-path artifacts/indexes/default
-python -m cyber_rag.cli.run_query "What is the difference between symmetric and asymmetric encryption?"
-python -m cyber_rag.cli.run_eval path/to/eval.jsonl --index-path artifacts/indexes/default --output artifacts/evals/latest.csv
-```
+### Text corpus and retrieval workflow
+
+- Build a FAISS index from local text sources under `data/raw/`:
+  ```bash
+  python -m cyber_rag.cli.build_index data/raw --index-path artifacts/indexes/default
+  ```
+- Run a single retrieval-grounded question against an existing index:
+  ```bash
+  python -m cyber_rag.cli.run_query "What is the difference between symmetric and asymmetric encryption?"
+  ```
+- Run batch evaluation (baseline vs RAG) on a dataset and write CSV output:
+  ```bash
+  python -m cyber_rag.cli.run_eval path/to/eval.jsonl --index-path artifacts/indexes/default --output artifacts/evals/latest.csv
+  ```
+
+### Other development operations
+
+- Run static checks for style and common issues:
+  ```bash
+  ruff check cyber_rag scripts tests
+  ```
+- Run the full unit test suite:
+  ```bash
+  pytest
+  ```
+- Run only the chunking metadata smoke test:
+  ```bash
+  pytest tests/test_chunking.py
+  ```
 
 ## Supported starter inputs
 
