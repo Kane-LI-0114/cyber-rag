@@ -20,21 +20,73 @@ def load_evaluation_data(csv_path: str) -> pd.DataFrame:
     return df
 
 
+def _skipped_mask(df: pd.DataFrame) -> pd.Series:
+    """True where a row was skipped (generation/judge error)."""
+    if "eval_skipped" not in df.columns:
+        return pd.Series(False, index=df.index)
+    s = df["eval_skipped"]
+    if s.dtype == bool:
+        return s.fillna(False)
+    return s.astype(str).str.lower().isin(("true", "1", "yes"))
+
+
+def _completed_rows(df: pd.DataFrame) -> pd.DataFrame:
+    """Rows that completed evaluation (excludes skipped)."""
+    return df[~_skipped_mask(df)]
+
+
+def _per_row_score(df: pd.DataFrame, judge_col: str, bool_col: str) -> pd.Series:
+    """Prefer LLM judge scores [0,1] when present; else 0/1 from bool column."""
+    if judge_col in df.columns:
+        return df[judge_col].fillna(df[bool_col].astype(float))
+    return df[bool_col].astype(float)
+
+
 def calculate_accuracy_metrics(df: pd.DataFrame) -> dict:
     """Calculate accuracy metrics for baseline and RAG."""
-    total = len(df)
-    baseline_correct = df["baseline_correct"].sum()
-    rag_correct = df["rag_correct"].sum()
+    skipped_count = (
+        int(_skipped_mask(df).sum()) if "eval_skipped" in df.columns else 0
+    )
+    dfm = _completed_rows(df)
+    total = len(dfm)
+    baseline_correct = dfm["baseline_correct"].sum()
+    rag_correct = dfm["rag_correct"].sum()
 
-    baseline_acc = baseline_correct / total if total > 0 else 0
-    rag_acc = rag_correct / total if total > 0 else 0
+    baseline_scores = _per_row_score(
+        dfm, "baseline_judge_accuracy", "baseline_correct"
+    )
+    rag_scores = _per_row_score(dfm, "rag_judge_accuracy", "rag_correct")
+
+    baseline_acc = float(baseline_scores.mean()) if total > 0 else 0.0
+    rag_acc = float(rag_scores.mean()) if total > 0 else 0.0
 
     # Separate by question type
-    mcq_df = df[df["question_type"] == "multiple_choice"]
-    short_df = df[df["question_type"] == "short_answer"]
+    mcq_df = dfm[dfm["question_type"] == "multiple_choice"]
+    short_df = dfm[dfm["question_type"] == "short_answer"]
+
+    short_baseline_acc = (
+        float(short_df["baseline_judge_accuracy"].mean())
+        if len(short_df) > 0 and "baseline_judge_accuracy" in short_df.columns
+        else (
+            short_df["baseline_correct"].sum() / len(short_df)
+            if len(short_df) > 0
+            else 0
+        )
+    )
+    short_rag_acc = (
+        float(short_df["rag_judge_accuracy"].mean())
+        if len(short_df) > 0 and "rag_judge_accuracy" in short_df.columns
+        else (
+            short_df["rag_correct"].sum() / len(short_df)
+            if len(short_df) > 0
+            else 0
+        )
+    )
 
     return {
         "total_questions": total,
+        "skipped_count": skipped_count,
+        "total_rows_in_csv": len(df),
         "baseline_correct": int(baseline_correct),
         "rag_correct": int(rag_correct),
         "baseline_accuracy": baseline_acc,
@@ -60,16 +112,8 @@ def calculate_accuracy_metrics(df: pd.DataFrame) -> dict:
                 "total": len(short_df),
                 "baseline_correct": int(short_df["baseline_correct"].sum()),
                 "rag_correct": int(short_df["rag_correct"].sum()),
-                "baseline_accuracy": (
-                    short_df["baseline_correct"].sum() / len(short_df)
-                    if len(short_df) > 0
-                    else 0
-                ),
-                "rag_accuracy": (
-                    short_df["rag_correct"].sum() / len(short_df)
-                    if len(short_df) > 0
-                    else 0
-                ),
+                "baseline_accuracy": short_baseline_acc,
+                "rag_accuracy": short_rag_acc,
             },
         },
     }
@@ -77,38 +121,41 @@ def calculate_accuracy_metrics(df: pd.DataFrame) -> dict:
 
 def categorize_results(df: pd.DataFrame) -> dict:
     """Categorize questions by baseline vs RAG performance."""
-    both_correct = df[
-        (df["baseline_correct"] == True) & (df["rag_correct"] == True)
+    dfm = _completed_rows(df)
+    n = len(dfm)
+    denom = n if n > 0 else 1
+    both_correct = dfm[
+        (dfm["baseline_correct"] == True) & (dfm["rag_correct"] == True)
     ]
-    both_wrong = df[
-        (df["baseline_correct"] == False) & (df["rag_correct"] == False)
+    both_wrong = dfm[
+        (dfm["baseline_correct"] == False) & (dfm["rag_correct"] == False)
     ]
-    rag_improved = df[
-        (df["baseline_correct"] == False) & (df["rag_correct"] == True)
+    rag_improved = dfm[
+        (dfm["baseline_correct"] == False) & (dfm["rag_correct"] == True)
     ]
-    rag_regressed = df[
-        (df["baseline_correct"] == True) & (df["rag_correct"] == False)
+    rag_regressed = dfm[
+        (dfm["baseline_correct"] == True) & (dfm["rag_correct"] == False)
     ]
 
     return {
         "both_correct": {
             "count": len(both_correct),
-            "percentage": len(both_correct) / len(df) * 100,
+            "percentage": len(both_correct) / denom * 100,
             "indices": both_correct.index.tolist(),
         },
         "both_wrong": {
             "count": len(both_wrong),
-            "percentage": len(both_wrong) / len(df) * 100,
+            "percentage": len(both_wrong) / denom * 100,
             "indices": both_wrong.index.tolist(),
         },
         "rag_improved": {
             "count": len(rag_improved),
-            "percentage": len(rag_improved) / len(df) * 100,
+            "percentage": len(rag_improved) / denom * 100,
             "indices": rag_improved.index.tolist(),
         },
         "rag_regressed": {
             "count": len(rag_regressed),
-            "percentage": len(rag_regressed) / len(df) * 100,
+            "percentage": len(rag_regressed) / denom * 100,
             "indices": rag_regressed.index.tolist(),
         },
     }
@@ -116,21 +163,22 @@ def categorize_results(df: pd.DataFrame) -> dict:
 
 def get_error_cases(df: pd.DataFrame, case_type: str) -> pd.DataFrame:
     """Get specific error case types for detailed analysis."""
+    dfm = _completed_rows(df)
     if case_type == "rag_improved":
-        return df[
-            (df["baseline_correct"] == False) & (df["rag_correct"] == True)
+        return dfm[
+            (dfm["baseline_correct"] == False) & (dfm["rag_correct"] == True)
         ]
     elif case_type == "rag_regressed":
-        return df[
-            (df["baseline_correct"] == True) & (df["rag_correct"] == False)
+        return dfm[
+            (dfm["baseline_correct"] == True) & (dfm["rag_correct"] == False)
         ]
     elif case_type == "both_wrong":
-        return df[
-            (df["baseline_correct"] == False) & (df["rag_correct"] == False)
+        return dfm[
+            (dfm["baseline_correct"] == False) & (dfm["rag_correct"] == False)
         ]
     elif case_type == "both_correct":
-        return df[
-            (df["baseline_correct"] == True) & (df["rag_correct"] == True)
+        return dfm[
+            (dfm["baseline_correct"] == True) & (dfm["rag_correct"] == True)
         ]
     return pd.DataFrame()
 
@@ -151,7 +199,10 @@ def format_question_details(row: pd.Series) -> str:
         except Exception:
             pass
 
-    lines.append(f"Reference Answer: {row['reference_answer_text']}")
+    ref = row.get("reference_answer_text", row.get("reference_answer", ""))
+    lines.append(f"Reference Answer: {ref}")
+    if row.get("eval_skipped"):
+        lines.append(f"Skipped: {row.get('skip_reason', '')}")
     lines.append(f"Baseline Answer: {row['baseline_answer']} {'✓' if row['baseline_correct'] else '✗'}")
     lines.append(f"RAG Answer: {row['rag_answer']} {'✓' if row['rag_correct'] else '✗'}")
     lines.append(f"Retrieved Chunks: {row['retrieved_chunks']}")
@@ -175,7 +226,10 @@ def generate_text_report(
     # Overall Metrics
     lines.append("## Overall Performance Metrics")
     lines.append("-" * 40)
-    lines.append(f"Total Questions: {metrics['total_questions']}")
+    lines.append(f"Total Questions (evaluated): {metrics['total_questions']}")
+    if metrics.get("skipped_count", 0) > 0:
+        lines.append(f"Skipped (errors): {metrics['skipped_count']}")
+        lines.append(f"Total rows in CSV: {metrics.get('total_rows_in_csv', metrics['total_questions'])}")
     lines.append(f"Baseline Accuracy: {metrics['baseline_accuracy']:.2%}")
     lines.append(f"RAG Accuracy: {metrics['rag_accuracy']:.2%}")
     lines.append(f"Improvement: {metrics['improvement']:+.2%}")
@@ -358,7 +412,9 @@ def main():
     print("\n" + "=" * 50)
     print("Evaluation Summary")
     print("=" * 50)
-    print(f"Total Questions: {metrics['total_questions']}")
+    print(f"Total Questions (evaluated): {metrics['total_questions']}")
+    if metrics.get("skipped_count", 0) > 0:
+        print(f"Skipped (errors): {metrics['skipped_count']}")
     print(f"Baseline Accuracy: {metrics['baseline_accuracy']:.2%}")
     print(f"RAG Accuracy: {metrics['rag_accuracy']:.2%}")
     print(f"Improvement: {metrics['improvement']:+.2%}")

@@ -27,6 +27,27 @@ def _read_env(name: str) -> str | None:
     return value or None
 
 
+# Prepended to LLM prompts only (not retrieval queries) to frame questions as coursework.
+_DEFAULT_QUESTION_CONTEXT_PREFIX = (
+    "[Academic / 课程作业] 本题来自大学网络安全课程作业，仅用于教学评估与防御性理解。"
+    " This question is from a university cybersecurity course assignment "
+    "for educational assessment only.\n\n"
+)
+
+
+def get_question_context_prefix() -> str:
+    """Prefix for question text sent to generation/judge models.
+
+    - If ``CYBER_RAG_QUESTION_CONTEXT_PREFIX`` is set (including empty), that value is used
+      after stripping; set it to empty in ``.env`` to disable.
+    - If unset, the default coursework framing above is used.
+    """
+    raw = os.getenv("CYBER_RAG_QUESTION_CONTEXT_PREFIX")
+    if raw is not None:
+        return raw.strip()
+    return _DEFAULT_QUESTION_CONTEXT_PREFIX
+
+
 @dataclass(slots=True)
 class ChunkingConfig:
     chunk_size: int = 1000

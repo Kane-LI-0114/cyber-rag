@@ -232,6 +232,16 @@ Additional runtime defaults are configured in `cyber_rag/config.py`, including:
   ```bash
   python -m cyber_rag.cli.run_eval path/to/eval.jsonl --index-path artifacts/indexes/default --output artifacts/evals/latest.csv
   ```
+  For short-answer datasets, an LLM judge scores each answer in **[0, 1]** as
+  `baseline_judge_accuracy` and `rag_judge_accuracy`. Optional columns
+  `baseline_correct` / `rag_correct` are True when the score is at least
+  `--judge-threshold` (default `0.5`). Example with a separate judge model:
+  ```bash
+  python -m cyber_rag.cli.run_eval path/to/eval.jsonl \
+    --model deepseek-v3 \
+    --judge-model gpt-4o-mini \
+    --judge-threshold 0.5
+  ```
 
 ### Other development operations
 

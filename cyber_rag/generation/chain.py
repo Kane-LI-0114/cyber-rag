@@ -11,7 +11,13 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import AzureChatOpenAI, ChatOpenAI
 from openai import RateLimitError
 
-from cyber_rag.config import ENV_PATH, EmbeddingConfig, GenerationConfig, RetrievalConfig
+from cyber_rag.config import (
+    ENV_PATH,
+    EmbeddingConfig,
+    GenerationConfig,
+    RetrievalConfig,
+    get_question_context_prefix,
+)
 from cyber_rag.retrieval.retriever import retrieve_documents
 from cyber_rag.schemas import AnswerResult, ChunkReference
 
@@ -181,6 +187,17 @@ def _format_question(question: str, answer_options: dict[str, str] | None = None
     return "\n".join(lines)
 
 
+def _prompt_question_for_llm(
+    question: str, answer_options: dict[str, str] | None = None
+) -> str:
+    """Body shown to the LLM; may include coursework prefix. Retrieval uses raw ``question``."""
+    body = _format_question(question, answer_options)
+    prefix = get_question_context_prefix()
+    if prefix:
+        return f"{prefix}{body}"
+    return body
+
+
 def _normalize_answer(
     raw_answer: str,
     answer_options: dict[str, str] | None = None,
@@ -228,7 +245,7 @@ def answer_with_retrieval(
     )
 
     llm = _build_llm(generation_config)
-    formatted_question = _format_question(question, answer_options)
+    formatted_question = _prompt_question_for_llm(question, answer_options)
 
     response = llm.invoke(
         prompt.format_messages(
@@ -261,7 +278,7 @@ def answer_without_retrieval(
     )
 
     llm = _build_llm(generation_config)
-    formatted_question = _format_question(question, answer_options)
+    formatted_question = _prompt_question_for_llm(question, answer_options)
 
     response = llm.invoke(prompt.format_messages(question=formatted_question))
     normalized_answer = _normalize_answer(str(response.content), answer_options)

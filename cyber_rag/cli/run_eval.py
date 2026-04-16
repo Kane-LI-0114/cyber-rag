@@ -24,6 +24,17 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--model", default=None, help="LLM name for answer generation (defaults to .env config).")
     parser.add_argument(
+        "--judge-model",
+        default=None,
+        help="LLM name for short-answer judging (defaults to --model or .env config).",
+    )
+    parser.add_argument(
+        "--judge-threshold",
+        type=float,
+        default=0.5,
+        help="Short-answer judge: baseline_correct/rag_correct are True when score >= this (default 0.5).",
+    )
+    parser.add_argument(
         "--output",
         default=str(DEFAULT_EVAL_PATH),
         help="CSV path for writing evaluation outputs.",
@@ -39,6 +50,10 @@ def main() -> None:
         embedding_config=EmbeddingConfig(model_name=args.embedding_model),
         retrieval_config=RetrievalConfig(k=args.k),
         generation_config=GenerationConfig(model_name=args.model),
+        judge_generation_config=GenerationConfig(
+            model_name=args.judge_model or args.model
+        ),
+        judge_threshold=args.judge_threshold,
         limit=args.limit,
     )
     output_path = Path(args.output)
