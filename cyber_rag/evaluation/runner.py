@@ -9,7 +9,7 @@ import pandas as pd
 from cyber_rag.config import EmbeddingConfig, GenerationConfig, RetrievalConfig
 from cyber_rag.evaluation.datasets import load_evaluation_examples
 from cyber_rag.generation.chain import answer_with_retrieval, answer_without_retrieval
-
+from cyber_rag.generation.local_llm import answer_with_retrieval_local, answer_without_retrieval_local
 
 def _get_field(example, name: str, default=None):
     if isinstance(example, Mapping):
