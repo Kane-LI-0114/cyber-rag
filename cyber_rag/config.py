@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -14,7 +15,19 @@ ARTIFACTS_DIR = ROOT_DIR / "artifacts"
 INDEXES_DIR = ARTIFACTS_DIR / "indexes"
 EVALS_DIR = ARTIFACTS_DIR / "evals"
 DEFAULT_INDEX_DIR = INDEXES_DIR / "default"
-DEFAULT_EVAL_PATH = EVALS_DIR / "latest.csv"
+
+
+def get_default_eval_filename() -> str:
+    """Generate a timestamped evaluation filename.
+
+    Returns:
+        A filename in the format 'eval_YYYYMMDD_HHMMSS.csv', e.g., 'eval_20260416_235500.csv'.
+    """
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    return f"eval_{timestamp}.csv"
+
+
+DEFAULT_EVAL_PATH = EVALS_DIR / get_default_eval_filename()
 
 load_dotenv(ENV_PATH)
 
@@ -90,6 +103,10 @@ class GenerationConfig:
             self.model_name = self.model_name or _read_env("CYBER_RAG_ONEAPI_MODEL_NAME")
             self.api_key = self.api_key or _read_env("CYBER_RAG_ONEAPI_API_KEY")
             self.base_url = self.base_url or _read_env("CYBER_RAG_ONEAPI_BASE_URL")
+        elif self.provider == "huggingface":
+            self.model_name = self.model_name or _read_env("CYBER_RAG_HUGGINGFACE_MODEL_NAME")
+            self.api_key = self.api_key or _read_env("CYBER_RAG_HUGGINGFACE_API_KEY")
+            self.base_url = self.base_url or _read_env("CYBER_RAG_HUGGINGFACE_BASE_URL") or "https://router.huggingface.co/v1"
         else:
             raise ValueError(f"Unsupported provider: {self.provider}")
 

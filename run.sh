@@ -41,7 +41,7 @@ show_help() {
     echo "  eval <数据集路径>   批量评估 (baseline vs RAG)"
     echo ""
     echo -e "${GREEN}[评估分析]${NC}"
-    echo "  analyze [CSV路径]    分析评估结果 (默认: artifacts/evals/latest.csv)"
+    echo "  analyze [CSV路径]    分析评估结果 (默认: 最新带时间戳的CSV文件)"
     echo "  analyze -v          详细文本报告"
     echo "  analyze --report <文件>   保存文本报告"
     echo "  analyze --json <文件>     保存JSON摘要"
@@ -119,7 +119,7 @@ run_eval() {
         exit 1
     fi
     local dataset="$1"
-    local output=${2:-artifacts/evals/latest.csv}
+    local output=${2:-artifacts/evals/$(date +%Y%m%d_%H%M%S).csv}
     echo -e "${YELLOW}>>> 批量评估: $dataset${NC}"
     conda activate cyber-rag
     python -m cyber_rag.cli.run_eval "$dataset" \
@@ -130,7 +130,8 @@ run_eval() {
 
 # 分析评估结果
 analyze() {
-    local csv_path="artifacts/evals/latest.csv"
+    local csv_path
+    csv_path=$(ls -t artifacts/evals/eval_*.csv 2>/dev/null | head -1 || echo "artifacts/evals/latest.csv")
     local extra_args=""
 
     # 检查第一个参数是否为文件路径

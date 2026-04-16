@@ -115,6 +115,14 @@ def _build_llm(config: GenerationConfig | None = None):
             temperature=generation_config.temperature,
             max_retries=2,
         )
+    elif generation_config.provider == "huggingface":
+        return ChatOpenAI(
+            model=generation_config.model_name or "mistralai/Mistral-7B-Instruct-v0.2",
+            base_url=generation_config.base_url.rstrip("/"),
+            api_key=generation_config.api_key,
+            temperature=generation_config.temperature,
+            max_retries=2,
+        )
     else:
         raise NotImplementedError(
             f"Unsupported generation provider: {generation_config.provider}"

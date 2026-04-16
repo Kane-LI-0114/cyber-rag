@@ -10,7 +10,8 @@ The project studies whether domain-specific retrieval improves LLM performance o
 
 - **LangChain-first orchestration** for loaders, text splitting, embeddings, retrievers, prompt assembly, and model integration.
 - **Structure-aware document processing** that preserves page, section, source, and security-domain metadata before chunking.
-- **Vision-based PDF parsing** using DotsOCR for structured layout extraction (titles, sections, tables, formulas).
+- **Multi-engine PDF parsing**: Vision-based DotsOCR for scanned PDFs and PyMuPDF for embedded text PDFs with automatic detection.
+- **Multi-provider LLM support**: Cloud APIs (Azure OpenAI, OneAPI, HuggingFace Inference API) and local HuggingFace models (Mistral-7B).
 - **Local-first retrieval indexing** built on FAISS for reproducible experiments.
 - **Evidence-centric answer generation** so outputs can be traced back to retrieved chunks.
 - **Evaluation-driven development** because the main deliverable is reproducible evidence, not only an interactive demo.
@@ -27,9 +28,11 @@ cyber_rag/
 │   └── check_config.py   # Verify API configuration
 ├── config.py             # Shared paths and runtime configs
 ├── schemas.py            # Answer, evidence, and evaluation dataclasses
+├── logging_utils.py      # Unified logging configuration
 ├── ingest/               # Source loading with structured PDF parsing
 │   ├── loaders.py        # Main ingestion entry point
-│   └── dots_ocr.py       # Vision-based PDF layout extraction
+│   ├── dots_ocr.py       # Vision-based PDF layout extraction (DotsOCR)
+│   └── pymupdf_parser.py # Fast PDF parsing with embedded text detection
 ├── processing/           # Normalization and recursive chunking
 │   ├── normalize.py      # Text cleaning and metadata enrichment
 │   └── chunking.py       # Recursive splitting with chunk IDs
@@ -38,7 +41,8 @@ cyber_rag/
 ├── retrieval/            # Retriever construction and query-time fetch
 │   └── retriever.py      # FAISS-based document retrieval
 ├── generation/           # Baseline and retrieval-grounded answer flows
-│   └── chain.py          # LLM prompting and answer generation
+│   ├── chain.py          # LLM prompting and answer generation (Azure/OneAPI/HuggingFace)
+│   └── local_llm.py      # Local HuggingFace LLM support (Mistral-7B)
 └── evaluation/           # Dataset loading and batch evaluation
     ├── datasets.py       # JSONL/CSV evaluation data loading
     └── runner.py         # Baseline vs RAG comparison runner
@@ -47,7 +51,7 @@ scripts/
 ├── build_index.py        # Thin compatibility wrapper for index building
 ├── run_query.py          # Thin compatibility wrapper for single-query runs
 ├── run_eval.py           # Thin compatibility wrapper for batch evaluation
-└── analyze_eval.py       # Evaluation results analysis script
+└── analyze_eval.py       # Evaluation results analysis and reporting
 
 tests/
 └── test_chunking.py      # Metadata-preservation smoke test
@@ -172,22 +176,32 @@ python -m cyber_rag.cli.check_config
 
 ### One-Key Provider Switching
 
-The project supports switching between **Azure OpenAI** and **OneAPI** (OpenAI-compatible) providers:
+The project supports switching between **Azure OpenAI**, **OneAPI** (OpenAI-compatible), **HuggingFace Inference API**, and **Local HuggingFace** models:
 
 ```bash
 # In .env, simply change this line:
-CYBER_RAG_LLM_PROVIDER=azure    # Use Azure OpenAI
+CYBER_RAG_LLM_PROVIDER=azure         # Use Azure OpenAI
 # or
-CYBER_RAG_LLM_PROVIDER=oneapi   # Use OneAPI/OpenAI-compatible API
+CYBER_RAG_LLM_PROVIDER=oneapi        # Use OneAPI/OpenAI-compatible API
+# or
+CYBER_RAG_LLM_PROVIDER=huggingface   # Use HuggingFace Inference API
+# or
+CYBER_RAG_LLM_PROVIDER=local         # Use local HuggingFace model (Mistral-7B)
 
 # No code changes needed - the system automatically loads the correct credentials
 ```
+
+**Local LLM Support** (`generation/local_llm.py`):
+- Automatic device detection (CUDA/MPS/CPU)
+- HuggingFace transformers integration (Mistral-7B-Instruct)
+- Configurable generation parameters (temperature, top_p, repetition_penalty)
+- Same API as cloud functions: `answer_with_retrieval_local()` and `answer_without_retrieval_local()`
 
 ### Configuration Structure
 
 ```bash
 # Provider Selection
-CYBER_RAG_LLM_PROVIDER=azure        # or 'oneapi'
+CYBER_RAG_LLM_PROVIDER=azure        # or 'oneapi' or 'huggingface'
 
 # Azure OpenAI Configuration (when provider=azure)
 # Note: base_url should NOT include /openai suffix - the SDK appends it automatically.
@@ -201,6 +215,12 @@ CYBER_RAG_AZURE_API_VERSION=2024-10-21
 CYBER_RAG_ONEAPI_API_KEY=your_key
 CYBER_RAG_ONEAPI_BASE_URL=https://api.example.com/v1
 CYBER_RAG_ONEAPI_MODEL_NAME=deepseek-v3
+
+# HuggingFace Configuration (when provider=huggingface)
+# Get your token from: https://huggingface.co/settings/tokens
+CYBER_RAG_HUGGINGFACE_API_KEY=hf_your_token_here
+CYBER_RAG_HUGGINGFACE_BASE_URL=https://router.huggingface.co/v1
+CYBER_RAG_HUGGINGFACE_MODEL_NAME=mistralai/Mistral-7B-Instruct-v0.2:featherless-ai
 
 # DotsOCR Configuration (optional, for enhanced PDF parsing)
 # Falls back to OneAPI credentials if not explicitly set
@@ -230,7 +250,12 @@ Additional runtime defaults are configured in `cyber_rag/config.py`, including:
   ```
 - Run batch evaluation (baseline vs RAG) on a dataset and write CSV output:
   ```bash
-  python -m cyber_rag.cli.run_eval path/to/eval.jsonl --index-path artifacts/indexes/default --output artifacts/evals/latest.csv
+  python -m cyber_rag.cli.run_eval path/to/eval.jsonl --index-path artifacts/indexes/default
+  ```
+  
+  By default, evaluation files are automatically named with timestamps in the format `artifacts/evals/eval_YYYYMMDD_HHMMSS.csv`. To specify a custom output path:
+  ```bash
+  python -m cyber_rag.cli.run_eval path/to/eval.jsonl --output artifacts/evals/my_experiment.csv
   ```
   For short-answer datasets, an LLM judge scores each answer in **[0, 1]** as
   `baseline_judge_accuracy` and `rag_judge_accuracy`. Optional columns
@@ -267,11 +292,15 @@ The current ingestion layer supports:
 - **HTML** - Parsed with BeautifulSoup
 - **HTTP/HTTPS web pages** - Fetched and parsed at runtime
 
-## DotsOCR PDF Parsing
+## PDF Parsing
 
-The system includes an optional vision-based PDF parsing module (`dots_ocr.py`) that uses a vision-language model to extract structured layout information:
+The system includes two complementary PDF parsing engines:
 
-### Features
+### DotsOCR Vision-based Parsing (`dots_ocr.py`)
+
+A vision-language model-based parser for scanned PDFs and complex layouts:
+
+**Features**:
 - **Layout Categories**: Title, Section-header, Text, Table, Formula, List-item, Caption, Picture, etc.
 - **Bounding Box Extraction**: Precise coordinates for each element
 - **Reading Order Preservation**: Elements sorted by human reading order
@@ -279,7 +308,7 @@ The system includes an optional vision-based PDF parsing module (`dots_ocr.py`) 
 - **Table Extraction**: Markdown table formatting
 - **Concurrent Processing**: Multi-threaded page processing for speed
 
-### Configuration
+**Configuration**:
 DotsOCR automatically uses your OneAPI credentials if dedicated environment variables are not set:
 
 ```bash
@@ -293,8 +322,24 @@ CYBER_RAG_DOTS_OCR_API_KEY=your_key
 CYBER_RAG_DOTS_OCR_MODEL=DotsOCR
 ```
 
-### Fallback Behavior
-If DotsOCR is not configured or fails, the system automatically falls back to PyPDFLoader for standard text extraction.
+### PyMuPDF Parser (`pymupdf_parser.py`)
+
+A fast parser for PDFs with embedded text, featuring intelligent fallback logic:
+
+**Features**:
+- **Embedded Text Detection**: Automatically detects whether a PDF contains extractable embedded text
+- **Sampling-based Detection**: Efficiently checks PDFs by sampling pages (15% for long documents, all pages for short ones)
+- **Font Metadata Analysis**: Classifies text spans based on font size and style (Title, Section-header, List-item, Text)
+- **Table Detection**: Uses PyMuPDF's built-in table detection with markdown export
+- **DotsOCR-compatible Output**: Structured layout blocks aligned with DotsOCR's format for seamless downstream processing
+
+**Fallback Logic**:
+The loader automatically selects the appropriate parser:
+1. Use PyMuPDF if PDF contains embedded text (fast path)
+2. Fall back to DotsOCR for scanned/image-based PDFs
+3. Final fallback to PyPDFLoader if both fail
+
+This multi-tier approach ensures optimal parsing speed while maintaining high quality output.
 
 ## Evaluation Dataset Format
 
@@ -327,12 +372,57 @@ question,answer
 "What is XSS?","Cross-site scripting is a security vulnerability..."
 ```
 
+## Evaluation Analysis
+
+The system includes a comprehensive evaluation analysis script (`scripts/analyze_eval.py`) for deeper insights into baseline vs RAG performance:
+
+**Features**:
+- **Accuracy Metrics**: Overall and per-question-type accuracy calculation
+- **Result Categorization**: Classifies questions into four categories:
+  - Both Correct: Baseline and RAG both answered correctly
+  - RAG Improved: Baseline failed, RAG succeeded
+  - RAG Regressed: Baseline succeeded, RAG failed
+  - Both Wrong: Neither method succeeded
+- **Detailed Reports**: Text reports with sample cases and root cause analysis
+- **JSON Export**: Machine-readable summary for further processing
+- **Error Case Export**: Export specific case types to CSV for targeted analysis
+
+**Usage**:
+```bash
+# Quick summary of latest results
+./run.sh analyze
+
+# Detailed text report
+./run.sh analyze -v
+
+# Save text report to file
+./run.sh analyze --report report.txt
+
+# Save JSON summary
+./run.sh analyze --json summary.json
+
+# Export RAG-regressed cases to CSV
+./run.sh analyze -e rag_regressed --export-path regressed_cases.csv
+```
+
+**API**:
+```python
+from scripts.analyze_eval import (
+    load_evaluation_data,
+    calculate_accuracy_metrics,
+    categorize_results,
+    generate_text_report,
+    generate_json_summary,
+    export_error_cases,
+)
+```
+
 ## Current repository status
 
 This is a functional implementation for cybersecurity RAG evaluation. The modular architecture supports:
 - Extending parsing depth with additional layout analyzers
 - Adding hybrid retrieval strategies (sparse + dense)
-- Supporting additional model providers
+- Supporting additional model providers (Azure, OneAPI, HuggingFace Inference API)
 - Implementing richer evaluation metrics
 - Adding reranking and query expansion
 
