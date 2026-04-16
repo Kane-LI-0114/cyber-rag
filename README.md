@@ -70,20 +70,48 @@ python -m pip install -r requirements.txt
 
 ## Runtime credentials
 
-Copy the template and fill in the Azure-compatible values used for answer generation:
+### Quick Start
 
 ```bash
+# 1. Copy the template
 cp .env.example .env
+
+# 2. Edit .env with your API credentials
+nano .env
+
+# 3. Check configuration status
+python -m cyber_rag.cli.check_config
 ```
 
-`.env` should contain these values:
+### One-Key Provider Switching
+
+The project supports switching between **Azure OpenAI** and **OneAPI** (OpenAI-compatible) providers:
 
 ```bash
-CYBER_RAG_LLM_API_KEY=your_api_key
-CYBER_RAG_LLM_PROVIDER=azure
-CYBER_RAG_LLM_MODEL_NAME=gpt-35-turbo
-CYBER_RAG_LLM_BASE_URL=https://hkust.azure-api.net
-CYBER_RAG_LLM_API_VERSION=2025-02-01-preview
+# In .env, simply change this line:
+CYBER_RAG_LLM_PROVIDER=azure    # Use Azure OpenAI
+# or
+CYBER_RAG_LLM_PROVIDER=oneapi   # Use OneAPI/OpenAI-compatible API
+
+# No code changes needed - the system automatically loads the correct credentials
+```
+
+### Configuration Structure
+
+```bash
+# Provider Selection
+CYBER_RAG_LLM_PROVIDER=azure        # or 'oneapi'
+
+# Azure OpenAI Configuration (when provider=azure)
+CYBER_RAG_AZURE_API_KEY=your_key
+CYBER_RAG_AZURE_BASE_URL=https://xxx.openai.azure.com/openai
+CYBER_RAG_AZURE_MODEL_NAME=gpt-4o-mini
+CYBER_RAG_AZURE_API_VERSION=2024-10-21
+
+# OneAPI Configuration (when provider=oneapi)
+CYBER_RAG_ONEAPI_API_KEY=your_key
+CYBER_RAG_ONEAPI_BASE_URL=https://api.example.com/v1
+CYBER_RAG_ONEAPI_MODEL_NAME=deepseek-v3
 ```
 
 Additional runtime defaults are configured in `cyber_rag/config.py`, including:

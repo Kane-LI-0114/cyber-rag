@@ -71,6 +71,27 @@ class GenerationConfig:
             self.base_url = self.base_url or _read_env("CYBER_RAG_ONEAPI_BASE_URL")
         else:
             raise ValueError(f"Unsupported provider: {self.provider}")
+
+    @property
+    def is_configured(self) -> bool:
+        """Check if the current provider has all required credentials."""
+        return bool(self.api_key and self.base_url and self.model_name)
+
+
+def get_current_provider() -> str:
+    """Get the currently configured LLM provider."""
+    return _read_env("CYBER_RAG_LLM_PROVIDER") or "azure"
+
+
+def print_config_status() -> None:
+    """Print the current configuration status for debugging."""
+    provider = get_current_provider()
+    config = GenerationConfig()
+    print(f"Current Provider: {provider.upper()}")
+    print(f"Model: {config.model_name or 'NOT SET'}")
+    print(f"Base URL: {config.base_url or 'NOT SET'}")
+    print(f"API Key: {'***' + config.api_key[-8:] if config.api_key else 'NOT SET'}")
+    print(f"Configured: {'Yes' if config.is_configured else 'No'}")
 def ensure_project_directories() -> None:
     for path in (RAW_DATA_DIR, INDEXES_DIR, EVALS_DIR):
         path.mkdir(parents=True, exist_ok=True)

@@ -14,6 +14,7 @@ dynamic = ["dependencies"]
 cyber-rag-build-index = "cyber_rag.cli.build_index:main"
 cyber-rag-query = "cyber_rag.cli.run_query:main"
 cyber-rag-eval = "cyber_rag.cli.run_eval:main"
+cyber-rag-check-config = "cyber_rag.cli.check_config:main"
 
 [tool.setuptools]
 include-package-data = true
