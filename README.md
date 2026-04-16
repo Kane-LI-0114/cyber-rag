@@ -103,8 +103,10 @@ CYBER_RAG_LLM_PROVIDER=oneapi   # Use OneAPI/OpenAI-compatible API
 CYBER_RAG_LLM_PROVIDER=azure        # or 'oneapi'
 
 # Azure OpenAI Configuration (when provider=azure)
+# Note: base_url should NOT include /openai suffix - the SDK appends it automatically.
+# For Azure API Management gateways, set base_url to the gateway root (e.g., https://xxx.azure-api.net).
 CYBER_RAG_AZURE_API_KEY=your_key
-CYBER_RAG_AZURE_BASE_URL=https://xxx.openai.azure.com/openai
+CYBER_RAG_AZURE_BASE_URL=https://xxx.openai.azure.com
 CYBER_RAG_AZURE_MODEL_NAME=gpt-4o-mini
 CYBER_RAG_AZURE_API_VERSION=2024-10-21
 
