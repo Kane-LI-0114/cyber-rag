@@ -31,7 +31,7 @@ def main() -> None:
         print("# For Azure:")
         print("CYBER_RAG_LLM_PROVIDER=azure")
         print("CYBER_RAG_AZURE_API_KEY=your_key")
-        print("CYBER_RAG_AZURE_BASE_URL=https://xxx.openai.azure.com/openai")
+        print("CYBER_RAG_AZURE_BASE_URL=https://xxx.openai.azure.com  # NOTE: no /openai suffix")
         print("CYBER_RAG_AZURE_MODEL_NAME=gpt-4o-mini")
         print()
         print("# For OneAPI:")
