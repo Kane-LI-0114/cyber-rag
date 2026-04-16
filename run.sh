@@ -3,6 +3,16 @@
 
 set -e  # 遇到错误时退出
 
+# 初始化 conda (支持非交互式 shell)
+if command -v conda &> /dev/null; then
+    # 如果 conda 是函数，直接使用
+    eval "$(command conda shell.bash hook 2>/dev/null)" 2>/dev/null || true
+elif [ -f "$HOME/miniconda3/etc/profile.d/conda.sh" ]; then
+    source "$HOME/miniconda3/etc/profile.d/conda.sh"
+elif [ -f "$HOME/anaconda3/etc/profile.d/conda.sh" ]; then
+    source "$HOME/anaconda3/etc/profile.d/conda.sh"
+fi
+
 # 颜色定义
 RED='\033[0;31m'
 GREEN='\033[0;32m'
