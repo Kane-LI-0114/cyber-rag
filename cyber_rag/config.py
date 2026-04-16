@@ -50,18 +50,27 @@ class RetrievalConfig:
 
 @dataclass(slots=True)
 class GenerationConfig:
-    provider: str = "azure"
-    model_name: str = "gpt-35-turbo"  # Azure deployment name
+    provider: str = field(
+        default_factory=lambda: _read_env("CYBER_RAG_LLM_PROVIDER") or "azure"
+    )
+    model_name: str | None = None
     temperature: float = 0.0
-    api_key: str | None = field(
-        default_factory=lambda: _read_env("CYBER_RAG_LLM_API_KEY")
-    )
-    base_url: str | None = field(
-        default_factory=lambda: _read_env("CYBER_RAG_LLM_BASE_URL")
-    )
-    api_version: str | None = field(
-        default_factory=lambda: _read_env("CYBER_RAG_LLM_API_VERSION")
-    )
+    api_key: str | None = None
+    base_url: str | None = None
+    api_version: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.provider == "azure":
+            self.model_name = self.model_name or _read_env("CYBER_RAG_AZURE_MODEL_NAME")
+            self.api_key = self.api_key or _read_env("CYBER_RAG_AZURE_API_KEY")
+            self.base_url = self.base_url or _read_env("CYBER_RAG_AZURE_BASE_URL")
+            self.api_version = self.api_version or _read_env("CYBER_RAG_AZURE_API_VERSION")
+        elif self.provider == "oneapi":
+            self.model_name = self.model_name or _read_env("CYBER_RAG_ONEAPI_MODEL_NAME")
+            self.api_key = self.api_key or _read_env("CYBER_RAG_ONEAPI_API_KEY")
+            self.base_url = self.base_url or _read_env("CYBER_RAG_ONEAPI_BASE_URL")
+        else:
+            raise ValueError(f"Unsupported provider: {self.provider}")
 def ensure_project_directories() -> None:
     for path in (RAW_DATA_DIR, INDEXES_DIR, EVALS_DIR):
         path.mkdir(parents=True, exist_ok=True)

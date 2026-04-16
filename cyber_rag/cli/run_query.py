@@ -22,7 +22,7 @@ def parse_args() -> argparse.Namespace:
         default="sentence-transformers/all-MiniLM-L6-v2",
         help="Embedding model name used to load the vector store.",
     )
-    parser.add_argument("--model", default="gpt-4o-mini", help="LLM name for answer generation.")
+    parser.add_argument("--model", default=None, help="LLM name for answer generation (defaults to .env config).")
     return parser.parse_args()
 
 
