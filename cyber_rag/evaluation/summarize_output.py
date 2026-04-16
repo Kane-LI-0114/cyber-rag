@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from cyber_rag.config import EVALS_DIR, ROOT_DIR
+from cyber_rag.config import EVALS_DIR, ROOT_DIR, GenerationConfig
 
 
 def _skipped_mask(df: pd.DataFrame) -> pd.Series:
@@ -83,6 +83,9 @@ def append_eval_summary_to_overall(
     output_path: Path,
     frame: pd.DataFrame,
     overall_path: Path | None = None,
+    *,
+    baseline_answer_model: str | None = None,
+    rag_answer_model: str | None = None,
 ) -> Path:
     """Append one summary row for this eval CSV to ``overall.csv``."""
     overall = overall_path or (EVALS_DIR / "overall.csv")
@@ -90,9 +93,14 @@ def append_eval_summary_to_overall(
 
     summary = summarize_eval_dataframe(frame)
     summary["output_file"] = _relative_output_path(Path(output_path))
+    gen = GenerationConfig()
+    summary["baseline_answer_model"] = baseline_answer_model or gen.model_name or ""
+    summary["rag_answer_model"] = rag_answer_model or gen.model_name or ""
 
     columns_order = [
         "output_file",
+        "baseline_answer_model",
+        "rag_answer_model",
         "total_rows",
         "evaluated_count",
         "skipped_count",
@@ -108,6 +116,14 @@ def append_eval_summary_to_overall(
 
     if overall.exists():
         existing = pd.read_csv(overall)
+        for col in columns_order:
+            if col not in existing.columns:
+                existing[col] = pd.NA
+        extra_cols = [c for c in existing.columns if c not in columns_order]
+        existing = existing[columns_order + extra_cols]
+        for col in extra_cols:
+            new_row[col] = pd.NA
+        new_row = new_row[columns_order + extra_cols]
         combined = pd.concat([existing, new_row], ignore_index=True)
     else:
         combined = new_row

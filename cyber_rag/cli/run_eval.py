@@ -45,12 +45,13 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    generation_config = GenerationConfig(model_name=args.model)
     frame = run_evaluation(
         dataset_path=args.dataset,
         index_path=args.index_path,
         embedding_config=EmbeddingConfig(model_name=args.embedding_model),
         retrieval_config=RetrievalConfig(k=args.k),
-        generation_config=GenerationConfig(model_name=args.model),
+        generation_config=generation_config,
         judge_generation_config=GenerationConfig(
             model_name=args.judge_model or args.model
         ),
@@ -62,7 +63,12 @@ def main() -> None:
     frame.to_csv(output_path, index=False)
     print(f"Saved {len(frame)} evaluation rows to {output_path}")
 
-    overall = append_eval_summary_to_overall(output_path, frame)
+    overall = append_eval_summary_to_overall(
+        output_path,
+        frame,
+        baseline_answer_model=generation_config.model_name,
+        rag_answer_model=generation_config.model_name,
+    )
     print(f"Appended summary row to {overall}")
 
 
