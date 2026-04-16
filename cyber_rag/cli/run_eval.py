@@ -5,6 +5,7 @@ from pathlib import Path
 
 from cyber_rag.config import DEFAULT_EVAL_PATH, DEFAULT_INDEX_DIR, EmbeddingConfig, GenerationConfig, RetrievalConfig
 from cyber_rag.evaluation.runner import run_evaluation
+from cyber_rag.evaluation.summarize_output import append_eval_summary_to_overall
 
 
 def parse_args() -> argparse.Namespace:
@@ -60,6 +61,9 @@ def main() -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     frame.to_csv(output_path, index=False)
     print(f"Saved {len(frame)} evaluation rows to {output_path}")
+
+    overall = append_eval_summary_to_overall(output_path, frame)
+    print(f"Appended summary row to {overall}")
 
 
 if __name__ == "__main__":
