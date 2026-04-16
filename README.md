@@ -46,7 +46,8 @@ cyber_rag/
 scripts/
 ├── build_index.py        # Thin compatibility wrapper for index building
 ├── run_query.py          # Thin compatibility wrapper for single-query runs
-└── run_eval.py           # Thin compatibility wrapper for batch evaluation
+├── run_eval.py           # Thin compatibility wrapper for batch evaluation
+└── analyze_eval.py       # Evaluation results analysis script
 
 tests/
 └── test_chunking.py      # Metadata-preservation smoke test
@@ -139,6 +140,13 @@ A convenient `run.sh` script is provided for common operations:
 # Query and evaluation
 ./run.sh query "What is XSS?"        # Single retrieval-grounded question
 ./run.sh eval CyberMetric-80-v1.jsonl  # Batch evaluation
+
+# Evaluation analysis
+./run.sh analyze                       # Quick summary of latest results
+./run.sh analyze -v                    # Detailed text report
+./run.sh analyze --report report.txt  # Save text report to file
+./run.sh analyze --json summary.json   # Save JSON summary
+./run.sh analyze -e rag_regressed      # Export RAG-regressed cases to CSV
 
 # Testing
 ./run.sh test               # Run all tests

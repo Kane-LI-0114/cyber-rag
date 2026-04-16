@@ -40,6 +40,13 @@ show_help() {
     echo "  query <问题>        单条检索问答"
     echo "  eval <数据集路径>   批量评估 (baseline vs RAG)"
     echo ""
+    echo -e "${GREEN}[评估分析]${NC}"
+    echo "  analyze [CSV路径]    分析评估结果 (默认: artifacts/evals/latest.csv)"
+    echo "  analyze -v          详细文本报告"
+    echo "  analyze --report <文件>   保存文本报告"
+    echo "  analyze --json <文件>     保存JSON摘要"
+    echo "  analyze -e <类型>        导出错误案例 (rag_improved/rag_regressed/both_wrong)"
+    echo ""
     echo -e "${GREEN}[测试]${NC}"
     echo "  test               运行全部测试"
     echo "  test-chunking      运行分块测试"
@@ -121,6 +128,27 @@ run_eval() {
     echo -e "${GREEN}>>> 评估完成，结果保存至: $output${NC}"
 }
 
+# 分析评估结果
+analyze() {
+    local csv_path="artifacts/evals/latest.csv"
+    local extra_args=""
+
+    # 检查第一个参数是否为文件路径
+    if [ -n "$1" ] && [ ! "${1:0:1}" = "-" ]; then
+        csv_path="$1"
+        shift
+    fi
+
+    if [ ! -f "$csv_path" ]; then
+        echo -e "${RED}错误: 文件不存在: $csv_path${NC}"
+        exit 1
+    fi
+
+    echo -e "${YELLOW}>>> 分析评估结果: $csv_path${NC}"
+    conda activate cyber-rag
+    python scripts/analyze_eval.py "$csv_path" "$@"
+}
+
 # 运行测试
 run_tests() {
     echo -e "${YELLOW}>>> 运行全部测试...${NC}"
@@ -165,6 +193,10 @@ case "$1" in
         ;;
     eval)
         run_eval "$2" "$3"
+        ;;
+    analyze)
+        shift  # 移除 analyze，保留其余参数
+        analyze "$@"
         ;;
     test)
         run_tests
