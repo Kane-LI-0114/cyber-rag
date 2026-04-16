@@ -123,7 +123,33 @@ python -m pip install -r requirements.txt
 
 ## Runtime credentials
 
-### Quick Start
+## Quick commands
+
+A convenient `run.sh` script is provided for common operations:
+
+```bash
+# Environment setup
+./run.sh setup              # Install/update dependencies
+./run.sh check              # Check configuration status
+
+# Index building
+./run.sh build-index        # Build FAISS index (default settings)
+./run.sh build-index-custom 500 100  # Custom chunk_size and overlap
+
+# Query and evaluation
+./run.sh query "What is XSS?"        # Single retrieval-grounded question
+./run.sh eval CyberMetric-80-v1.jsonl  # Batch evaluation
+
+# Testing
+./run.sh test               # Run all tests
+./run.sh test-chunking      # Run chunking tests only
+./run.sh lint               # Code style check
+
+# Help
+./run.sh help               # Show all available commands
+```
+
+Alternatively, use the module-based commands directly:
 
 ```bash
 # 1. Copy the template
