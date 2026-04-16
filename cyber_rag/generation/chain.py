@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 
 from langchain_core.documents import Document
@@ -10,7 +11,6 @@ from langchain_openai import AzureChatOpenAI, ChatOpenAI
 from cyber_rag.config import ENV_PATH, EmbeddingConfig, GenerationConfig, RetrievalConfig
 from cyber_rag.retrieval.retriever import retrieve_documents
 from cyber_rag.schemas import AnswerResult, ChunkReference
-import re
 
 _SYSTEM_PROMPT = """You are an academic research assistant supporting a university study on \
 cybersecurity knowledge benchmarking in LLMs.
@@ -64,11 +64,11 @@ def _build_llm(config: GenerationConfig | None = None):
         )
 
     if generation_config.provider == "azure":
-        os.environ["AZURE_OPENAI_API_KEY"] = generation_config.api_key
-        os.environ["AZURE_OPENAI_ENDPOINT"] = generation_config.base_url.rstrip("/")
         return AzureChatOpenAI(
-            azure_deployment=generation_config.model_name or "gpt-35-turbo",
-            api_version=generation_config.api_version or "2023-05-15",
+            azure_deployment=generation_config.model_name or "gpt-4o-mini",
+            api_version=generation_config.api_version or "2024-10-21",
+            azure_endpoint=generation_config.base_url.rstrip("/"),
+            api_key=generation_config.api_key,
             temperature=generation_config.temperature,
             max_retries=2,
         )
