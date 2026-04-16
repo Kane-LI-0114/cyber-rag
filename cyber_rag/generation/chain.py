@@ -5,7 +5,7 @@ from pathlib import Path
 
 from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_openai import AzureChatOpenAI
+from langchain_openai import AzureChatOpenAI, ChatOpenAI
 
 from cyber_rag.config import ENV_PATH, EmbeddingConfig, GenerationConfig, RetrievalConfig
 from cyber_rag.retrieval.retriever import retrieve_documents
@@ -50,39 +50,40 @@ Educational Question: {question}
 """
 
 
-def _build_llm(config: GenerationConfig | None = None) -> AzureChatOpenAI:
+def _build_llm(config: GenerationConfig | None = None):
     generation_config = config or GenerationConfig()
-
-    if generation_config.provider != "azure":
-        raise NotImplementedError(
-            f"Unsupported generation provider: {generation_config.provider}"
-        )
 
     if not generation_config.api_key:
         raise EnvironmentError(
-            f"CYBER_RAG_LLM_API_KEY is required in {ENV_PATH} to run Azure answer generation."
+            f"API key is required in {ENV_PATH} to run answer generation."
         )
 
     if not generation_config.base_url:
         raise EnvironmentError(
-            f"CYBER_RAG_LLM_BASE_URL is required in {ENV_PATH} to run Azure answer generation."
+            f"Base URL is required in {ENV_PATH} to run answer generation."
         )
 
-    if not generation_config.api_version:
-        raise EnvironmentError(
-            f"CYBER_RAG_LLM_API_VERSION is required in {ENV_PATH} to run Azure answer generation."
+    if generation_config.provider == "azure":
+        os.environ["AZURE_OPENAI_API_KEY"] = generation_config.api_key
+        os.environ["AZURE_OPENAI_ENDPOINT"] = generation_config.base_url.rstrip("/")
+        return AzureChatOpenAI(
+            azure_deployment=generation_config.model_name or "gpt-35-turbo",
+            api_version=generation_config.api_version or "2023-05-15",
+            temperature=generation_config.temperature,
+            max_retries=2,
         )
-
-    # AzureChatOpenAI supports AZURE_OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT
-    os.environ["AZURE_OPENAI_API_KEY"] = generation_config.api_key
-    os.environ["AZURE_OPENAI_ENDPOINT"] = generation_config.base_url.rstrip("/")
-
-    return AzureChatOpenAI(
-        azure_deployment=generation_config.model_name,  # Azure deployment name
-        api_version=generation_config.api_version,      # e.g. 2023-05-15
-        temperature=generation_config.temperature,
-        max_retries=2,
-    )
+    elif generation_config.provider == "oneapi":
+        return ChatOpenAI(
+            model=generation_config.model_name or "gpt-3.5-turbo",
+            base_url=generation_config.base_url.rstrip("/"),
+            api_key=generation_config.api_key,
+            temperature=generation_config.temperature,
+            max_retries=2,
+        )
+    else:
+        raise NotImplementedError(
+            f"Unsupported generation provider: {generation_config.provider}"
+        )
 
 
 def _format_context(documents: list[Document]) -> str:

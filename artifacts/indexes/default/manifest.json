@@ -2,9 +2,9 @@
   "source_inputs": [
     "data/raw"
   ],
-  "raw_document_count": 7042,
-  "normalized_document_count": 7029,
-  "chunk_count": 21542,
+  "raw_document_count": 10472,
+  "normalized_document_count": 10459,
+  "chunk_count": 33507,
   "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
   "chunk_size": 1000,
   "chunk_overlap": 200
