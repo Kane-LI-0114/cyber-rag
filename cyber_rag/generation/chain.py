@@ -2,15 +2,44 @@ from __future__ import annotations
 
 import os
 import re
+import time
+from functools import wraps
 from pathlib import Path
 
 from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import AzureChatOpenAI, ChatOpenAI
+from openai import RateLimitError
 
 from cyber_rag.config import ENV_PATH, EmbeddingConfig, GenerationConfig, RetrievalConfig
 from cyber_rag.retrieval.retriever import retrieve_documents
 from cyber_rag.schemas import AnswerResult, ChunkReference
+
+
+def _retry_on_rate_limit(max_retries: int = 5, base_delay: float = 2.0):
+    """Decorator that retries a function on RateLimitError with exponential backoff."""
+
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            last_exception = None
+            for attempt in range(max_retries):
+                try:
+                    return func(*args, **kwargs)
+                except RateLimitError as e:
+                    last_exception = e
+                    if attempt < max_retries - 1:
+                        delay = base_delay * (2**attempt)
+                        print(f"[RETRY] Rate limit hit, waiting {delay:.1f}s before retry ({attempt + 1}/{max_retries})...")
+                        time.sleep(delay)
+                    else:
+                        print(f"[RETRY] Max retries ({max_retries}) exceeded for {func.__name__}")
+                        raise
+            raise last_exception
+
+        return wrapper
+
+    return decorator
 
 _SYSTEM_PROMPT = """You are an academic research assistant supporting a university study on \
 cybersecurity knowledge benchmarking in LLMs.
@@ -174,6 +203,7 @@ def _normalize_answer(
     return upper_text
 
 
+@_retry_on_rate_limit(max_retries=5, base_delay=2.0)
 def answer_with_retrieval(
     question: str,
     index_path: str | Path,
@@ -216,6 +246,7 @@ def answer_with_retrieval(
     )
 
 
+@_retry_on_rate_limit(max_retries=5, base_delay=2.0)
 def answer_without_retrieval(
     question: str,
     generation_config: GenerationConfig | None = None,
