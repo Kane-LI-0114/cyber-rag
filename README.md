@@ -11,7 +11,7 @@ The project studies whether domain-specific retrieval improves LLM performance o
 - **LangChain-first orchestration** for loaders, text splitting, embeddings, retrievers, prompt assembly, and model integration.
 - **Structure-aware document processing** that preserves page, section, source, and security-domain metadata before chunking.
 - **Multi-engine PDF parsing**: Vision-based DotsOCR for scanned PDFs and PyMuPDF for embedded text PDFs with automatic detection.
-- **Dual LLM provider support**: Cloud APIs (Azure OpenAI, OneAPI) and local HuggingFace models (Mistral-7B).
+- **Multi-provider LLM support**: Cloud APIs (Azure OpenAI, OneAPI, HuggingFace Inference API) and local HuggingFace models (Mistral-7B).
 - **Local-first retrieval indexing** built on FAISS for reproducible experiments.
 - **Evidence-centric answer generation** so outputs can be traced back to retrieved chunks.
 - **Evaluation-driven development** because the main deliverable is reproducible evidence, not only an interactive demo.
@@ -41,7 +41,7 @@ cyber_rag/
 ├── retrieval/            # Retriever construction and query-time fetch
 │   └── retriever.py      # FAISS-based document retrieval
 ├── generation/           # Baseline and retrieval-grounded answer flows
-│   ├── chain.py          # LLM prompting and answer generation (Azure/OneAPI)
+│   ├── chain.py          # LLM prompting and answer generation (Azure/OneAPI/HuggingFace)
 │   └── local_llm.py      # Local HuggingFace LLM support (Mistral-7B)
 └── evaluation/           # Dataset loading and batch evaluation
     ├── datasets.py       # JSONL/CSV evaluation data loading
@@ -176,15 +176,17 @@ python -m cyber_rag.cli.check_config
 
 ### One-Key Provider Switching
 
-The project supports switching between **Azure OpenAI**, **OneAPI** (OpenAI-compatible), and **Local HuggingFace** models:
+The project supports switching between **Azure OpenAI**, **OneAPI** (OpenAI-compatible), **HuggingFace Inference API**, and **Local HuggingFace** models:
 
 ```bash
 # In .env, simply change this line:
-CYBER_RAG_LLM_PROVIDER=azure    # Use Azure OpenAI
+CYBER_RAG_LLM_PROVIDER=azure         # Use Azure OpenAI
 # or
-CYBER_RAG_LLM_PROVIDER=oneapi   # Use OneAPI/OpenAI-compatible API
+CYBER_RAG_LLM_PROVIDER=oneapi        # Use OneAPI/OpenAI-compatible API
 # or
-CYBER_RAG_LLM_PROVIDER=local   # Use local HuggingFace model (Mistral-7B)
+CYBER_RAG_LLM_PROVIDER=huggingface   # Use HuggingFace Inference API
+# or
+CYBER_RAG_LLM_PROVIDER=local         # Use local HuggingFace model (Mistral-7B)
 
 # No code changes needed - the system automatically loads the correct credentials
 ```
@@ -199,7 +201,7 @@ CYBER_RAG_LLM_PROVIDER=local   # Use local HuggingFace model (Mistral-7B)
 
 ```bash
 # Provider Selection
-CYBER_RAG_LLM_PROVIDER=azure        # or 'oneapi'
+CYBER_RAG_LLM_PROVIDER=azure        # or 'oneapi' or 'huggingface'
 
 # Azure OpenAI Configuration (when provider=azure)
 # Note: base_url should NOT include /openai suffix - the SDK appends it automatically.
@@ -213,6 +215,12 @@ CYBER_RAG_AZURE_API_VERSION=2024-10-21
 CYBER_RAG_ONEAPI_API_KEY=your_key
 CYBER_RAG_ONEAPI_BASE_URL=https://api.example.com/v1
 CYBER_RAG_ONEAPI_MODEL_NAME=deepseek-v3
+
+# HuggingFace Configuration (when provider=huggingface)
+# Get your token from: https://huggingface.co/settings/tokens
+CYBER_RAG_HUGGINGFACE_API_KEY=hf_your_token_here
+CYBER_RAG_HUGGINGFACE_BASE_URL=https://router.huggingface.co/v1
+CYBER_RAG_HUGGINGFACE_MODEL_NAME=mistralai/Mistral-7B-Instruct-v0.2:featherless-ai
 
 # DotsOCR Configuration (optional, for enhanced PDF parsing)
 # Falls back to OneAPI credentials if not explicitly set
@@ -404,7 +412,7 @@ from scripts.analyze_eval import (
 This is a functional implementation for cybersecurity RAG evaluation. The modular architecture supports:
 - Extending parsing depth with additional layout analyzers
 - Adding hybrid retrieval strategies (sparse + dense)
-- Supporting additional model providers
+- Supporting additional model providers (Azure, OneAPI, HuggingFace Inference API)
 - Implementing richer evaluation metrics
 - Adding reranking and query expansion
 

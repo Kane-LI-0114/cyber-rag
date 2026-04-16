@@ -82,6 +82,10 @@ class GenerationConfig:
             self.model_name = self.model_name or _read_env("CYBER_RAG_ONEAPI_MODEL_NAME")
             self.api_key = self.api_key or _read_env("CYBER_RAG_ONEAPI_API_KEY")
             self.base_url = self.base_url or _read_env("CYBER_RAG_ONEAPI_BASE_URL")
+        elif self.provider == "huggingface":
+            self.model_name = self.model_name or _read_env("CYBER_RAG_HUGGINGFACE_MODEL_NAME")
+            self.api_key = self.api_key or _read_env("CYBER_RAG_HUGGINGFACE_API_KEY")
+            self.base_url = self.base_url or _read_env("CYBER_RAG_HUGGINGFACE_BASE_URL") or "https://router.huggingface.co/v1"
         else:
             raise ValueError(f"Unsupported provider: {self.provider}")
 
