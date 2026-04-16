@@ -16,6 +16,7 @@ from cyber_rag.evaluation.text_metrics import (
     token_f1,
 )
 from cyber_rag.generation.chain import answer_with_retrieval, answer_without_retrieval
+from cyber_rag.generation.local_llm import  answer_with_retrieval_local, answer_without_retrieval_local
 from cyber_rag.indexing.faiss_store import create_embeddings
 from cyber_rag.retrieval.retriever import retrieve_documents
 
@@ -80,13 +81,13 @@ def run_evaluation(
             answers = _get_field(example, "answers")
             solution = str(_get_field(example, "solution")).strip().upper()
 
-            baseline = answer_without_retrieval(
+            baseline = answer_without_retrieval_local(
                 question=question,
                 answer_options=answers,
                 generation_config=generation_config,
             )
 
-            rag_result = answer_with_retrieval(
+            rag_result = answer_with_retrieval_local(
                 question=question,
                 answer_options=answers,
                 index_path=index_path,
@@ -131,12 +132,12 @@ def run_evaluation(
             )
             rag_contexts = [d.page_content for d in rag_docs]
 
-            baseline = answer_without_retrieval(
+            baseline = answer_without_retrieval_local(
                 question=question,
                 generation_config=generation_config,
             )
 
-            rag_result = answer_with_retrieval(
+            rag_result = answer_with_retrieval_local(
                 question=question,
                 index_path=index_path,
                 embedding_config=embedding_config,
