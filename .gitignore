@@ -6,6 +6,3 @@ CODEBUDDY.md
 
 # Build artifacts and indexes
 artifacts/
-
-# Raw data files (large PDFs)
-data/raw/
