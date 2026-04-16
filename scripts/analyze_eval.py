@@ -7,11 +7,21 @@ identifies improvement areas, and generates detailed reports.
 """
 
 import argparse
+import glob
 import json
 from pathlib import Path
 from typing import Optional
 
 import pandas as pd
+
+
+def get_latest_eval_file() -> str:
+    """Get the most recent timestamped evaluation file."""
+    eval_dir = Path("artifacts/evals")
+    eval_files = sorted(eval_dir.glob("eval_*.csv"), reverse=True)
+    if eval_files:
+        return str(eval_files[0])
+    return "artifacts/evals/latest.csv"
 
 
 def load_evaluation_data(csv_path: str) -> pd.DataFrame:
@@ -302,11 +312,12 @@ def main():
     parser = argparse.ArgumentParser(
         description="Analyze CyberRAG evaluation results"
     )
+    default_csv = get_latest_eval_file()
     parser.add_argument(
         "input",
         nargs="?",
-        default="artifacts/evals/latest.csv",
-        help="Path to evaluation CSV file (default: artifacts/evals/latest.csv)",
+        default=default_csv,
+        help=f"Path to evaluation CSV file. Defaults to the most recent file: {default_csv}",
     )
     parser.add_argument(
         "--report",
