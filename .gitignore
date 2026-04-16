@@ -3,3 +3,9 @@ CODEBUDDY.md
 .vscode
 .env
 *.pyc
+
+# Build artifacts and indexes
+artifacts/
+
+# Raw data files (large PDFs)
+data/raw/
