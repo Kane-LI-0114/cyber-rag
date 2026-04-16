@@ -5,18 +5,6 @@ from typing import Any
 
 
 @dataclass(slots=True)
-class LayoutBlockRef:
-    """Reference to a layout block from DotsOCR structured parsing."""
-
-    page_number: int
-    category: str | None = None
-    category_raw: str = ""
-    text: str | None = None
-    bbox: list[float] | None = None
-    order_in_page: int = 0
-
-
-@dataclass(slots=True)
 class ChunkReference:
     chunk_id: str
     source: str
@@ -32,7 +20,7 @@ class AnswerResult:
     answer: str
     sources: list[ChunkReference] = field(default_factory=list)
 
-
+    
 @dataclass(slots=True)
 class EvaluationExample:
     question: str

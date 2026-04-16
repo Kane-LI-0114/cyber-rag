@@ -39,16 +39,8 @@ def normalize_documents(documents: list[Document]) -> list[Document]:
         metadata = dict(document.metadata)
         source_path = metadata.get("source_path") or metadata.get("source") or "unknown"
         metadata.setdefault("title", Path(str(source_path)).stem)
-
-        # Preserve section from DotsOCR structured parsing if available
         metadata.setdefault("section", None)
         metadata.setdefault("page", metadata.get("page"))
         metadata.setdefault("security_domain", _infer_security_domain(cleaned, str(source_path)))
-
-        # Preserve DotsOCR layout metadata for downstream chunking
-        # (category, bbox, parser, layout_blocks, etc.)
-        # These are already in metadata from the loader, so we just
-        # make sure they survive the normalization step.
-
         normalized.append(Document(page_content=cleaned, metadata=metadata))
     return normalized

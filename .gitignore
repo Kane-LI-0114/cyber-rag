@@ -3,7 +3,3 @@ CODEBUDDY.md
 .vscode
 .env
 *.pyc
-.DS_Store
-
-# Build artifacts and indexes
-artifacts/
