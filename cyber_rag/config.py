@@ -61,14 +61,14 @@ class GenerationConfig:
 
     def __post_init__(self) -> None:
         if self.provider == "azure":
-            self.model_name = self.model_name or _read_env("CYBER_RAG_LLM_MODEL_NAME")
-            self.api_key = self.api_key or _read_env("CYBER_RAG_LLM_API_KEY")
-            self.base_url = self.base_url or _read_env("CYBER_RAG_LLM_BASE_URL")
-            self.api_version = self.api_version or _read_env("CYBER_RAG_LLM_API_VERSION")
+            self.model_name = self.model_name or _read_env("CYBER_RAG_AZURE_MODEL_NAME")
+            self.api_key = self.api_key or _read_env("CYBER_RAG_AZURE_API_KEY")
+            self.base_url = self.base_url or _read_env("CYBER_RAG_AZURE_BASE_URL")
+            self.api_version = self.api_version or _read_env("CYBER_RAG_AZURE_API_VERSION")
         elif self.provider == "oneapi":
-            self.model_name = self.model_name or _read_env("CYBER_RAG_LLM_MODEL_NAME")
-            self.api_key = self.api_key or _read_env("CYBER_RAG_LLM_API_KEY")
-            self.base_url = self.base_url or _read_env("CYBER_RAG_LLM_BASE_URL")
+            self.model_name = self.model_name or _read_env("CYBER_RAG_ONEAPI_MODEL_NAME")
+            self.api_key = self.api_key or _read_env("CYBER_RAG_ONEAPI_API_KEY")
+            self.base_url = self.base_url or _read_env("CYBER_RAG_ONEAPI_BASE_URL")
         else:
             raise ValueError(f"Unsupported provider: {self.provider}")
 
