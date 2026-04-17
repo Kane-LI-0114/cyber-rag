@@ -159,6 +159,7 @@ A convenient `run.sh` script is provided for common operations:
 ./run.sh eval CTF-MC                  # Batch evaluation (CTFKnow multiple choice)
 ./run.sh eval CTF-SA                  # Batch evaluation (CTFKnow short answer)
 ./run.sh eval eval_datasets/test.jsonl  # Direct path also works
+./run.sh eval CM-80 --model gpt-4o --judge-model gpt-4o-mini  # Custom models
 
 # Evaluation analysis
 ./run.sh analyze                       # Quick summary of latest results
@@ -205,6 +206,38 @@ All evaluation datasets are organized in the `eval_datasets/` folder:
 | `test` | test.jsonl | Test dataset |
 
 Use `./run.sh eval <alias>` for quick evaluation, or provide full path like `./run.sh eval eval_datasets/CyberMetric-80-v1.jsonl`.
+
+#### Model and Provider Configuration for Evaluation
+
+The evaluation command supports independent configuration for **answer model** and **judge model**, each with their own provider:
+
+```bash
+# Use .env defaults (answer and judge models from .env config)
+./run.sh eval CM-80
+
+# Specify answer model (provider from .env)
+./run.sh eval CM-80 --model gpt-4o
+
+# Specify answer and judge models separately
+./run.sh eval CM-80 --model gpt-4o --judge-model gpt-4o-mini
+
+# Specify provider and model for answer
+./run.sh eval CM-80 --provider azure --model gpt-4o
+
+# Specify provider and model for judge
+./run.sh eval CM-80 --judge-provider oneapi --judge-model DeepSeek-V3.2
+
+# Full customization: all providers and models
+./run.sh eval CM-80 \
+    --provider azure --model gpt-4o \
+    --judge-provider oneapi --judge-model gpt-4o-mini
+```
+
+**Key features:**
+- Answer and judge models are **independent** - use different models for different tasks
+- Each model can use a **different provider** (azure, oneapi, huggingface)
+- Settings from `.env` are used as defaults; command-line arguments override them
+- Recommended: use a more capable model for answers, cheaper model for judge
 
 ### One-Key Provider Switching
 

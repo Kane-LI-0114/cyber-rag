@@ -39,6 +39,8 @@ show_help() {
     echo -e "${GREEN}[查询与评估]${NC}"
     echo "  query <问题>        单条检索问答"
     echo "  eval <别名/路径>    批量评估 (baseline vs RAG)"
+    echo "                      [--provider <提供商>] [--model <回答模型>]"
+    echo "                      [--judge-provider <Judge提供商>] [--judge-model <Judge模型>]"
     echo "                      别名: CM-01-v1, CM-01-v2, CM-80, CM-500, SecQA, CTF-MC, CTF-SA, test"
     echo ""
     echo -e "${GREEN}[评估分析]${NC}"
@@ -61,6 +63,8 @@ show_help() {
     echo "  ./run.sh build-index"
     echo "  ./run.sh query \"什么是XSS攻击？\""
     echo "  ./run.sh eval CM-80"
+    echo "  ./run.sh eval CM-80 --provider azure --model gpt-4o"
+    echo "  ./run.sh eval CM-80 --provider oneapi --model DeepSeek-V3.2 --judge-model gpt-4o-mini"
     echo "  ./run.sh eval CM-500"
     echo "  ./run.sh eval SecQA"
 }
@@ -116,9 +120,48 @@ run_query() {
 
 # 批量评估
 run_eval() {
-    if [ -z "$1" ]; then
+    local dataset=""
+    local provider=""
+    local model=""
+    local judge_provider=""
+    local judge_model=""
+    local extra_args=()
+
+    # 解析参数
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --provider)
+                provider="$2"
+                shift 2
+                ;;
+            --model)
+                model="$2"
+                shift 2
+                ;;
+            --judge-provider)
+                judge_provider="$2"
+                shift 2
+                ;;
+            --judge-model)
+                judge_model="$2"
+                shift 2
+                ;;
+            --*)
+                extra_args+=("$1" "$2")
+                shift 2
+                ;;
+            *)
+                if [ -z "$dataset" ]; then
+                    dataset="$1"
+                fi
+                shift
+                ;;
+        esac
+    done
+
+    if [ -z "$dataset" ]; then
         echo -e "${RED}错误: 请提供数据集路径或别名${NC}"
-        echo "用法: ./run.sh eval <数据集路径或别名>"
+        echo "用法: ./run.sh eval <数据集> [--provider <提供商>] [--model <回答模型>] [--judge-provider <Judge提供商>] [--judge-model <Judge模型>]"
         echo ""
         echo "支持的别名:"
         echo "  CM-01-v1, CM-01-v2     -> CyberMetric-01 数据集 (1条)"
@@ -129,14 +172,21 @@ run_eval() {
         echo "  CTF-SA                 -> CTFKnow 简答题数据集"
         echo "  test                   -> 测试数据集"
         echo ""
+        echo "可选参数:"
+        echo "  --provider <提供商>           回答模型提供商 (azure, oneapi, huggingface)"
+        echo "  --model <模型名>             回答模型 (如 gpt-4o)"
+        echo "  --judge-provider <提供商>     Judge模型提供商 (默认: --provider 或 .env)"
+        echo "  --judge-model <模型名>       Judge模型 (如 gpt-4o-mini)"
+        echo ""
         echo "示例:"
         echo "  ./run.sh eval CM-80"
-        echo "  ./run.sh eval eval_datasets/CyberMetric-80-v1.jsonl"
+        echo "  ./run.sh eval CM-80 --model gpt-4o"
+        echo "  ./run.sh eval CM-80 --provider azure --model gpt-4o"
+        echo "  ./run.sh eval CM-80 --provider oneapi --model DeepSeek-V3.2 --judge-model gpt-4o-mini"
         exit 1
     fi
 
-    local dataset="$1"
-    local output=${2:-artifacts/evals/$(date +%Y%m%d_%H%M%S).csv}
+    local output="artifacts/evals/$(date +%Y%m%d_%H%M%S).csv"
 
     # 解析别名
     case "$dataset" in
@@ -173,10 +223,21 @@ run_eval() {
     fi
 
     echo -e "${YELLOW}>>> 批量评估: $dataset${NC}"
+    [ -n "$provider" ] && echo -e "${BLUE}    回答提供商: $provider${NC}"
+    [ -n "$model" ] && echo -e "${BLUE}    回答模型: $model${NC}"
+    [ -n "$judge_provider" ] && echo -e "${BLUE}    Judge提供商: $judge_provider${NC}"
+    [ -n "$judge_model" ] && echo -e "${BLUE}    Judge模型: $judge_model${NC}"
+
     conda activate cyber-rag
-    python -m cyber_rag.cli.run_eval "$dataset" \
-        --index-path artifacts/indexes/default \
-        --output "$output"
+
+    local cmd_args=("$dataset" "--index-path" "artifacts/indexes/default" "--output" "$output")
+    [ -n "$provider" ] && cmd_args+=("--provider" "$provider")
+    [ -n "$model" ] && cmd_args+=("--model" "$model")
+    [ -n "$judge_provider" ] && cmd_args+=("--judge-provider" "$judge_provider")
+    [ -n "$judge_model" ] && cmd_args+=("--judge-model" "$judge_model")
+    [ ${#extra_args[@]} -gt 0 ] && cmd_args+=("${extra_args[@]}")
+
+    python -m cyber_rag.cli.run_eval "${cmd_args[@]}"
     echo -e "${GREEN}>>> 评估完成，结果保存至: $output${NC}"
 }
 

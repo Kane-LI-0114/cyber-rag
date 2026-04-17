@@ -23,11 +23,27 @@ def parse_args() -> argparse.Namespace:
         default="sentence-transformers/all-MiniLM-L6-v2",
         help="Embedding model name used to load the vector store.",
     )
-    parser.add_argument("--model", default=None, help="LLM name for answer generation (defaults to .env config).")
+    parser.add_argument(
+        "--provider",
+        default=None,
+        choices=["azure", "oneapi", "huggingface"],
+        help="LLM provider for answer generation (defaults to .env config).",
+    )
+    parser.add_argument(
+        "--model",
+        default=None,
+        help="LLM model name for answer generation (defaults to .env config).",
+    )
+    parser.add_argument(
+        "--judge-provider",
+        default=None,
+        choices=["azure", "oneapi", "huggingface"],
+        help="LLM provider for judge (defaults to main provider or .env config).",
+    )
     parser.add_argument(
         "--judge-model",
         default=None,
-        help="LLM name for short-answer judging (defaults to --model or .env config).",
+        help="LLM model name for short-answer judging (defaults to .env config).",
     )
     parser.add_argument(
         "--judge-threshold",
@@ -45,10 +61,18 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    generation_config = GenerationConfig(model_name=args.model)
 
-    # Judge configuration: use JudgeConfig for independent provider/model settings
-    judge_config = JudgeConfig(model_name=args.judge_model)
+    # Answer model configuration
+    generation_config = GenerationConfig(
+        provider=args.provider,
+        model_name=args.model,
+    )
+
+    # Judge model configuration: independent provider/model settings
+    judge_config = JudgeConfig(
+        provider=args.judge_provider,
+        model_name=args.judge_model,
+    )
     judge_generation_config = judge_config.to_generation_config()
 
     print(f"[INFO] Answer Model: {generation_config.provider}/{generation_config.model_name}")
