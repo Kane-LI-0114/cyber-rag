@@ -159,7 +159,12 @@ A convenient `run.sh` script is provided for common operations:
 ./run.sh eval CTF-MC                  # Batch evaluation (CTFKnow multiple choice)
 ./run.sh eval CTF-SA                  # Batch evaluation (CTFKnow short answer)
 ./run.sh eval eval_datasets/test.jsonl  # Direct path also works
-./run.sh eval CM-80 --model gpt-4o --judge-model gpt-4o-mini  # Custom models
+
+# Evaluation with custom models (answer and judge are independent)
+./run.sh eval CM-80 --model gpt-4o              # Custom answer model
+./run.sh eval CM-80 --judge-model gpt-4o-mini   # Custom judge model
+./run.sh eval CM-80 --model gpt-4o --judge-model gpt-4o-mini  # Both custom
+./run.sh eval CM-80 --provider azure --model gpt-4o --judge-provider oneapi --judge-model gpt-4o-mini
 
 # Evaluation analysis
 ./run.sh analyze                       # Quick summary of latest results
@@ -167,6 +172,7 @@ A convenient `run.sh` script is provided for common operations:
 ./run.sh analyze --report report.txt  # Save text report to file
 ./run.sh analyze --json summary.json   # Save JSON summary
 ./run.sh analyze -e rag_regressed      # Export RAG-regressed cases to CSV
+./run.sh analyze eval_datasets/test.jsonl  # Analyze specific file
 
 # Testing
 ./run.sh test               # Run all tests
@@ -206,38 +212,6 @@ All evaluation datasets are organized in the `eval_datasets/` folder:
 | `test` | test.jsonl | Test dataset |
 
 Use `./run.sh eval <alias>` for quick evaluation, or provide full path like `./run.sh eval eval_datasets/CyberMetric-80-v1.jsonl`.
-
-#### Model and Provider Configuration for Evaluation
-
-The evaluation command supports independent configuration for **answer model** and **judge model**, each with their own provider:
-
-```bash
-# Use .env defaults (answer and judge models from .env config)
-./run.sh eval CM-80
-
-# Specify answer model (provider from .env)
-./run.sh eval CM-80 --model gpt-4o
-
-# Specify answer and judge models separately
-./run.sh eval CM-80 --model gpt-4o --judge-model gpt-4o-mini
-
-# Specify provider and model for answer
-./run.sh eval CM-80 --provider azure --model gpt-4o
-
-# Specify provider and model for judge
-./run.sh eval CM-80 --judge-provider oneapi --judge-model DeepSeek-V3.2
-
-# Full customization: all providers and models
-./run.sh eval CM-80 \
-    --provider azure --model gpt-4o \
-    --judge-provider oneapi --judge-model gpt-4o-mini
-```
-
-**Key features:**
-- Answer and judge models are **independent** - use different models for different tasks
-- Each model can use a **different provider** (azure, oneapi, huggingface)
-- Settings from `.env` are used as defaults; command-line arguments override them
-- Recommended: use a more capable model for answers, cheaper model for judge
 
 ### One-Key Provider Switching
 
@@ -324,50 +298,25 @@ Additional runtime defaults are configured in `cyber_rag/config.py`, including:
 
 ## Development commands
 
-### Text corpus and retrieval workflow
+All operations are available via `./run.sh`. For advanced usage, you can also use the Python modules directly:
 
-- Build a FAISS index from local text sources under `data/raw/`:
-  ```bash
-  python -m cyber_rag.cli.build_index data/raw --index-path artifacts/indexes/default
-  ```
-- Run a single retrieval-grounded question against an existing index:
-  ```bash
-  python -m cyber_rag.cli.run_query "What is the difference between symmetric and asymmetric encryption?"
-  ```
-- Run batch evaluation (baseline vs RAG) on a dataset and write CSV output:
-  ```bash
-  python -m cyber_rag.cli.run_eval eval_datasets/CyberMetric-80-v1.jsonl --index-path artifacts/indexes/default
-  ```
+```bash
+# Index building
+python -m cyber_rag.cli.build_index data/raw --index-path artifacts/indexes/default
 
-  By default, evaluation files are automatically named with timestamps in the format `artifacts/evals/eval_YYYYMMDD_HHMMSS.csv`. To specify a custom output path:
-  ```bash
-  python -m cyber_rag.cli.run_eval eval_datasets/CyberMetric-80-v1.jsonl --output artifacts/evals/my_experiment.csv
-  ```
-  For short-answer datasets, an LLM judge scores each answer in **[0, 1]** as
-  `baseline_judge_accuracy` and `rag_judge_accuracy`. Optional columns
-  `baseline_correct` / `rag_correct` are True when the score is at least
-  `--judge-threshold` (default `0.5`). Example with a separate judge model:
-  ```bash
-  python -m cyber_rag.cli.run_eval eval_datasets/ctfknow_short_answer.jsonl \
-    --model deepseek-v3 \
-    --judge-model gpt-4o-mini \
-    --judge-threshold 0.5
-  ```
+# Single query
+python -m cyber_rag.cli.run_query "Your question here"
 
-### Other development operations
+# Batch evaluation
+python -m cyber_rag.cli.run_eval eval_datasets/CyberMetric-80-v1.jsonl --output artifacts/evals/my_experiment.csv
 
-- Run static checks for style and common issues:
-  ```bash
-  ruff check cyber_rag scripts tests
-  ```
-- Run the full unit test suite:
-  ```bash
-  pytest
-  ```
-- Run only the chunking metadata smoke test:
-  ```bash
-  pytest tests/test_chunking.py
-  ```
+# Check configuration
+python -m cyber_rag.cli.check_config
+
+# Linting and testing
+ruff check cyber_rag scripts tests
+pytest tests/test_chunking.py
+```
 
 ## Supported starter inputs
 
@@ -525,31 +474,6 @@ Classifies questions into four categories:
 
 #### 9. Sample Case Export
 - Export specific error categories to CSV for targeted analysis
-
-### Usage
-
-```bash
-# Quick summary (recommended first step)
-./run.sh analyze -q
-
-# Full comprehensive report (recommended)
-./run.sh analyze -v
-
-# Quick summary of latest results
-./run.sh analyze
-
-# Save text report to file
-./run.sh analyze --report report.txt
-
-# Save JSON summary (for programmatic analysis)
-./run.sh analyze --json summary.json
-
-# Export RAG-regressed cases for targeted analysis
-./run.sh analyze -e rag_regressed --export-path regressed_cases.csv
-
-# Export all both-wrong cases for corpus improvement
-./run.sh analyze -e both_wrong --export-path hard_cases.csv
-```
 
 ### Python API
 
