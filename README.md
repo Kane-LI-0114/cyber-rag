@@ -254,6 +254,27 @@ CYBER_RAG_HUGGINGFACE_API_KEY=hf_your_token_here
 CYBER_RAG_HUGGINGFACE_BASE_URL=https://router.huggingface.co/v1
 CYBER_RAG_HUGGINGFACE_MODEL_NAME=mistralai/Mistral-7B-Instruct-v0.2:featherless-ai
 
+# Judge Model Configuration (for short-answer evaluation)
+# Falls back to main LLM provider if not explicitly set
+# Recommended: use a cheaper model for judging (e.g., gpt-4o-mini for answer, gpt-4o for judge)
+# Provider selection
+CYBER_RAG_JUDGE_LLM_PROVIDER=azure        # or 'oneapi' or 'huggingface'
+
+# Judge Azure OpenAI
+CYBER_RAG_JUDGE_AZURE_API_KEY=your_key
+CYBER_RAG_JUDGE_AZURE_BASE_URL=https://xxx.openai.azure.com
+CYBER_RAG_JUDGE_AZURE_MODEL_NAME=gpt-4o-mini
+CYBER_RAG_JUDGE_AZURE_API_VERSION=2024-10-21
+
+# Judge OneAPI
+CYBER_RAG_JUDGE_ONEAPI_API_KEY=your_key
+CYBER_RAG_JUDGE_ONEAPI_BASE_URL=https://api.example.com/v1
+CYBER_RAG_JUDGE_ONEAPI_MODEL_NAME=gpt-4o-mini
+
+# Judge HuggingFace
+CYBER_RAG_JUDGE_HUGGINGFACE_API_KEY=hf_your_token_here
+CYBER_RAG_JUDGE_HUGGINGFACE_MODEL_NAME=mistralai/Mistral-7B-Instruct-v0.2
+
 # DotsOCR Configuration (optional, for enhanced PDF parsing)
 # Falls back to OneAPI credentials if not explicitly set
 CYBER_RAG_DOTS_OCR_ENDPOINT=https://api.example.com/v1/chat/completions

@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from cyber_rag.config import DEFAULT_EVAL_PATH, DEFAULT_INDEX_DIR, EmbeddingConfig, GenerationConfig, RetrievalConfig
+from cyber_rag.config import DEFAULT_EVAL_PATH, DEFAULT_INDEX_DIR, EmbeddingConfig, GenerationConfig, JudgeConfig, RetrievalConfig
 from cyber_rag.evaluation.runner import run_evaluation
 from cyber_rag.evaluation.summarize_output import append_eval_summary_to_overall
 
@@ -46,15 +46,21 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     generation_config = GenerationConfig(model_name=args.model)
+
+    # Judge configuration: use JudgeConfig for independent provider/model settings
+    judge_config = JudgeConfig(model_name=args.judge_model)
+    judge_generation_config = judge_config.to_generation_config()
+
+    print(f"[INFO] Answer Model: {generation_config.provider}/{generation_config.model_name}")
+    print(f"[INFO] Judge Model:   {judge_generation_config.provider}/{judge_generation_config.model_name}")
+
     frame = run_evaluation(
         dataset_path=args.dataset,
         index_path=args.index_path,
         embedding_config=EmbeddingConfig(model_name=args.embedding_model),
         retrieval_config=RetrievalConfig(k=args.k),
         generation_config=generation_config,
-        judge_generation_config=GenerationConfig(
-            model_name=args.judge_model or args.model
-        ),
+        judge_generation_config=judge_generation_config,
         judge_threshold=args.judge_threshold,
         limit=args.limit,
     )

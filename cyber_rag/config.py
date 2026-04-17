@@ -121,6 +121,73 @@ def get_current_provider() -> str:
     return _read_env("CYBER_RAG_LLM_PROVIDER") or "azure"
 
 
+def get_judge_provider() -> str:
+    """Get the judge LLM provider.
+
+    Falls back to the main LLM provider if not explicitly configured.
+    """
+    return _read_env("CYBER_RAG_JUDGE_LLM_PROVIDER") or get_current_provider()
+
+
+@dataclass(slots=True)
+class JudgeConfig:
+    """Configuration for the judge LLM used for short-answer evaluation.
+
+    Falls back to the main LLM configuration if judge-specific environment
+    variables are not set. This allows using a cheaper/faster model for judging
+    while keeping the answer generation model separate.
+    """
+    provider: str = field(default_factory=get_judge_provider)
+    model_name: str | None = None
+    temperature: float = 0.0
+    api_key: str | None = None
+    base_url: str | None = None
+    api_version: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.provider == "azure":
+            self.model_name = self.model_name or _read_env("CYBER_RAG_JUDGE_AZURE_MODEL_NAME")
+            self.api_key = self.api_key or _read_env("CYBER_RAG_JUDGE_AZURE_API_KEY")
+            self.base_url = self.base_url or _read_env("CYBER_RAG_JUDGE_AZURE_BASE_URL")
+            self.api_version = self.api_version or _read_env("CYBER_RAG_JUDGE_AZURE_API_VERSION")
+        elif self.provider == "oneapi":
+            self.model_name = self.model_name or _read_env("CYBER_RAG_JUDGE_ONEAPI_MODEL_NAME")
+            self.api_key = self.api_key or _read_env("CYBER_RAG_JUDGE_ONEAPI_API_KEY")
+            self.base_url = self.base_url or _read_env("CYBER_RAG_JUDGE_ONEAPI_BASE_URL")
+        elif self.provider == "huggingface":
+            self.model_name = self.model_name or _read_env("CYBER_RAG_JUDGE_HUGGINGFACE_MODEL_NAME")
+            self.api_key = self.api_key or _read_env("CYBER_RAG_JUDGE_HUGGINGFACE_API_KEY")
+            self.base_url = self.base_url or _read_env("CYBER_RAG_JUDGE_HUGGINGFACE_BASE_URL") or "https://router.huggingface.co/v1"
+        else:
+            raise ValueError(f"Unsupported provider: {self.provider}")
+
+        # Fallback to main LLM config if judge-specific vars are not set
+        if not self.model_name:
+            self.model_name = _read_env(f"CYBER_RAG_{self.provider.upper()}_MODEL_NAME")
+        if not self.api_key:
+            self.api_key = _read_env(f"CYBER_RAG_{self.provider.upper()}_API_KEY")
+        if not self.base_url:
+            self.base_url = _read_env(f"CYBER_RAG_{self.provider.upper()}_BASE_URL")
+        if self.provider == "azure" and not self.api_version:
+            self.api_version = _read_env("CYBER_RAG_AZURE_API_VERSION")
+
+    @property
+    def is_configured(self) -> bool:
+        """Check if the judge model has all required credentials."""
+        return bool(self.api_key and self.base_url and self.model_name)
+
+    def to_generation_config(self) -> GenerationConfig:
+        """Convert JudgeConfig to GenerationConfig for use with generation modules."""
+        return GenerationConfig(
+            provider=self.provider,
+            model_name=self.model_name,
+            temperature=self.temperature,
+            api_key=self.api_key,
+            base_url=self.base_url,
+            api_version=self.api_version,
+        )
+
+
 def print_config_status() -> None:
     """Print the current configuration status for debugging."""
     provider = get_current_provider()
