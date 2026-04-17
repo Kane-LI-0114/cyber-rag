@@ -96,8 +96,11 @@ def main() -> None:
     overall = append_eval_summary_to_overall(
         output_path,
         frame,
+        answer_provider=generation_config.provider,
         baseline_answer_model=generation_config.model_name,
         rag_answer_model=generation_config.model_name,
+        judge_provider=judge_generation_config.provider,
+        judge_model=judge_generation_config.model_name,
     )
     print(f"Appended summary row to {overall}")
 

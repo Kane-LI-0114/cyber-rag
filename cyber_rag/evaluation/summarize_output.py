@@ -84,8 +84,11 @@ def append_eval_summary_to_overall(
     frame: pd.DataFrame,
     overall_path: Path | None = None,
     *,
+    answer_provider: str | None = None,
     baseline_answer_model: str | None = None,
     rag_answer_model: str | None = None,
+    judge_provider: str | None = None,
+    judge_model: str | None = None,
 ) -> Path:
     """Append one summary row for this eval CSV to ``overall.csv``."""
     overall = overall_path or (EVALS_DIR / "overall.csv")
@@ -94,13 +97,19 @@ def append_eval_summary_to_overall(
     summary = summarize_eval_dataframe(frame)
     summary["output_file"] = _relative_output_path(Path(output_path))
     gen = GenerationConfig()
+    summary["answer_provider"] = answer_provider or gen.provider or ""
     summary["baseline_answer_model"] = baseline_answer_model or gen.model_name or ""
     summary["rag_answer_model"] = rag_answer_model or gen.model_name or ""
+    summary["judge_provider"] = judge_provider or ""
+    summary["judge_model"] = judge_model or ""
 
     columns_order = [
         "output_file",
+        "answer_provider",
         "baseline_answer_model",
         "rag_answer_model",
+        "judge_provider",
+        "judge_model",
         "total_rows",
         "evaluated_count",
         "skipped_count",
