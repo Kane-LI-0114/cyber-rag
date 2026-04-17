@@ -1614,6 +1614,397 @@ def generate_comprehensive_report(
     return report
 
 
+def generate_markdown_report(
+    df: pd.DataFrame,
+    metrics: dict,
+    categories: dict,
+    retrieval_quality: dict,
+    difficulty: dict,
+    answer_quality: dict,
+    error_patterns: dict,
+    stats: dict,
+    cross_analysis: dict,
+    task_recall: Optional[dict] = None,
+    output_path: Optional[str] = None,
+) -> str:
+    """Generate a comprehensive Markdown report suitable for saving as .md."""
+    lines = []
+    lines.append("# CyberRAG Evaluation Analysis Report")
+    lines.append("")
+
+    # 1. Overall Metrics
+    lines.append("## 1. Overall Performance Metrics")
+    lines.append("")
+    lines.append(f"- **Total Questions (evaluated):** {metrics['total_questions']}")
+    if metrics.get("skipped_count", 0) > 0:
+        lines.append(f"- **Skipped (errors):** {metrics['skipped_count']}")
+    lines.append(f"- **Baseline Accuracy:** {metrics['baseline_accuracy']:.2%}")
+    lines.append(f"- **RAG Accuracy:** {metrics['rag_accuracy']:.2%}")
+    lines.append(f"- **Improvement:** {metrics['improvement']:+.2%}")
+    lines.append("")
+
+    # 2. By Question Type
+    lines.append("## 2. Performance by Question Type")
+    lines.append("")
+    for qtype, data in metrics["by_type"].items():
+        if data["total"] > 0:
+            lines.append(f"### {qtype.replace('_', ' ').title()}")
+            lines.append(f"- Total: {data['total']}")
+            lines.append(f"- Baseline: {data['baseline_correct']}/{data['total']} ({data['baseline_accuracy']:.2%})")
+            lines.append(f"- RAG: {data['rag_correct']}/{data['total']} ({data['rag_accuracy']:.2%})")
+            lines.append("")
+    lines.append("")
+
+    # 3. Result Categorization
+    lines.append("## 3. Result Categorization")
+    lines.append("")
+    lines.append(f"| Category | Count | Percentage |")
+    lines.append(f"|----------|-------|------------|")
+    lines.append(f"| Both Correct | {categories['both_correct']['count']} | {categories['both_correct']['percentage']:.1f}% |")
+    lines.append(f"| RAG Improved | {categories['rag_improved']['count']} | {categories['rag_improved']['percentage']:.1f}% |")
+    lines.append(f"| RAG Regressed | {categories['rag_regressed']['count']} | {categories['rag_regressed']['percentage']:.1f}% |")
+    lines.append(f"| Both Wrong | {categories['both_wrong']['count']} | {categories['both_wrong']['percentage']:.1f}% |")
+    lines.append("")
+
+    # 4. Retrieval Quality Analysis
+    if "error" not in retrieval_quality:
+        lines.append("## 4. Retrieval Quality Analysis")
+        lines.append("")
+        chunk_stats = retrieval_quality.get("chunk_count_stats", {})
+        if chunk_stats:
+            lines.append(f"- **Mean chunks retrieved:** {chunk_stats.get('mean', 0):.1f}")
+            lines.append(f"- **Median chunks retrieved:** {chunk_stats.get('median', 0):.1f}")
+            lines.append(f"- **Chunk range:** {chunk_stats.get('min', 0)} - {chunk_stats.get('max', 0)}")
+
+        zero_chunks = retrieval_quality.get("zero_chunk_cases", {})
+        if zero_chunks:
+            lines.append(f"- **Zero-chunk cases:** {zero_chunks.get('count', 0)} ({zero_chunks.get('percentage', 0):.1f}%)")
+
+        for status in ["correct", "incorrect"]:
+            key = f"chunk_count_when_rag_{status}"
+            if key in retrieval_quality:
+                stats_data = retrieval_quality[key]
+                lines.append(f"- **Mean chunks when RAG {status}:** {stats_data['mean']:.1f}")
+        lines.append("")
+
+    # 5. Question Difficulty Profile
+    lines.append("## 5. Question Difficulty Profile")
+    lines.append("")
+    score_data = difficulty.get("overall_score", {})
+    lines.append(f"- **Overall Difficulty Score:** {score_data.get('normalized_0_100', 0):.1f}/100 *(Higher = harder questions)*")
+    lines.append("")
+    lines.append("| Level | Rate | Interpretation |")
+    lines.append("|-------|------|---------------|")
+    for level in ["easy", "medium", "hard", "retrieval_trap"]:
+        level_data = difficulty.get(level, {})
+        lines.append(f"| {level.capitalize()} | {level_data.get('rate', 0):.1f}% | {level_data.get('interpretation', '')} |")
+    lines.append("")
+
+    # 6. Answer Quality Analysis
+    if answer_quality:
+        lines.append("## 6. Answer Quality Analysis")
+        lines.append("")
+
+        mcq_dist = answer_quality.get("mcq_option_distribution", {})
+        if mcq_dist:
+            lines.append("### MCQ Option Distribution (Baseline + RAG)")
+            lines.append("")
+            lines.append("| Option | Percentage |")
+            lines.append("|--------|-----------|")
+            for opt, data in mcq_dist.get("baseline_and_rag_combined", {}).items():
+                lines.append(f"| Option {opt} | {data['percentage']:.1f}% |")
+
+            lines.append("")
+            lines.append("### Reference Answer Distribution")
+            lines.append("")
+            lines.append("| Option | Percentage |")
+            lines.append("|--------|-----------|")
+            for opt, data in mcq_dist.get("reference_answer_distribution", {}).items():
+                lines.append(f"| Option {opt} | {data['percentage']:.1f}% |")
+
+            bias = mcq_dist.get("model_bias_detection", {})
+            if bias:
+                lines.append("")
+                lines.append("### Model Bias Detected")
+                lines.append("")
+                lines.append("| Option | Severity | Deviation |")
+                lines.append("|--------|----------|-----------|")
+                for opt, data in bias.items():
+                    lines.append(f"| Option {opt} | {data['severity'].upper()} | {data['deviation']:.1f}% |")
+
+        changes = answer_quality.get("mcq_answer_changes", {})
+        if changes:
+            lines.append("")
+            lines.append("### Answer Change Analysis")
+            lines.append("")
+            lines.append(f"- **Total changes:** {changes['total_changes']} ({changes['change_percentage']:.1f}%)")
+            lines.append(f"- **Changes favoring baseline:** {changes['changes_favoring_baseline']}")
+            lines.append(f"- **Changes favoring RAG:** {changes['changes_favoring_rag']}")
+
+        short_qa = answer_quality.get("short_answer_quality", {})
+        if short_qa:
+            lines.append("")
+            lines.append("### Short Answer Quality")
+            lines.append("")
+            base_len = short_qa.get("baseline_length_stats", {})
+            rag_len = short_qa.get("rag_length_stats", {})
+            lines.append(f"- **Baseline avg length:** {base_len.get('mean', 0):.0f} chars")
+            lines.append(f"- **RAG avg length:** {rag_len.get('mean', 0):.0f} chars")
+            lines.append(f"- **Length change:** {short_qa.get('length_change_ratio', 0):+.1f}%")
+
+            judge_stats = short_qa.get("judge_score_stats", {})
+            if judge_stats:
+                lines.append(f"- **Baseline judge mean:** {judge_stats.get('baseline_judge', {}).get('mean', 0):.3f}")
+                lines.append(f"- **RAG judge mean:** {judge_stats.get('rag_judge', {}).get('mean', 0):.3f}")
+
+            boundary = short_qa.get("boundary_samples", {})
+            if boundary:
+                lines.append(f"- **Baseline near-threshold:** {boundary.get('baseline_near_threshold', 0)} ({boundary.get('baseline_boundary_percentage', 0):.1f}%)")
+        lines.append("")
+
+    # 7. Error Pattern Analysis
+    if error_patterns:
+        lines.append("## 7. Error Pattern Analysis")
+        lines.append("")
+
+        regressed = error_patterns.get("rag_regressed_analysis", {})
+        if regressed:
+            lines.append(f"### RAG Regressed Cases: {regressed.get('total_count', 0)}")
+            chunk_stats = regressed.get("chunk_stats", {})
+            if chunk_stats:
+                lines.append(f"- Mean chunks: {chunk_stats.get('mean_chunks', 0):.1f}")
+                lines.append(f"- Zero-chunk cases: {chunk_stats.get('zero_chunk_count', 0)}")
+            high_chunk = regressed.get("high_chunk_regressed", {})
+            if high_chunk:
+                lines.append(f"- High chunk (>4) but still wrong: {high_chunk.get('count', 0)} ({high_chunk.get('percentage', 0):.1f}%)")
+
+        both_wrong = error_patterns.get("both_wrong_analysis", {})
+        if both_wrong:
+            lines.append("")
+            lines.append(f"### Both Wrong Cases: {both_wrong.get('total_count', 0)}")
+            for cause in both_wrong.get("possible_causes", [])[:2]:
+                lines.append(f"- {cause}")
+
+        change_patterns = error_patterns.get("answer_change_patterns", {})
+        if change_patterns:
+            lines.append("")
+            lines.append("### Answer Change Patterns (MCQ)")
+            eff = change_patterns.get("change_effectiveness", {})
+            lines.append(f"- Changes to correct: {eff.get('improved', 0)}")
+            lines.append(f"- Changes to incorrect: {eff.get('degraded', 0)}")
+            lines.append(f"- Net effect: {eff.get('net_effect', 0):+d}")
+        lines.append("")
+
+    # 8. Statistical Significance
+    if "error" not in stats.get("mcnemar_test", {}):
+        lines.append("## 8. Statistical Significance (McNemar's Test)")
+        lines.append("")
+
+        mcnemar = stats.get("mcnemar_test", {})
+        lines.append(f"- **Chi-square:** {mcnemar.get('chi_square', 0):.4f}")
+        lines.append(f"- **P-value:** {mcnemar.get('p_value', 1):.6f}")
+        lines.append(f"- **Significant at α=0.05:** {'Yes' if mcnemar.get('significant_at_0.05') else 'No'}")
+        lines.append(f"- **Significant at α=0.01:** {'Yes' if mcnemar.get('significant_at_0.01') else 'No'}")
+        lines.append(f"- **Interpretation:** {mcnemar.get('interpretation', '')}")
+
+        effect = stats.get("effect_size", {})
+        lines.append(f"- **Effect Size (Cohen's h):** {effect.get('cohens_h', 0):.4f}")
+        lines.append(f"- **Interpretation:** {effect.get('interpretation', '')}")
+
+        diff_est = stats.get("difference_estimate", {})
+        lines.append(f"- **Difference Estimate:** {diff_est.get('proportion_difference', 0):+.2%}")
+        lines.append(f"- **95% CI:** [{diff_est.get('95_ci_lower', 0):.2%}, {diff_est.get('95_ci_upper', 0):.2%}]")
+        lines.append(f"- **Interpretation:** {diff_est.get('interpretation', '')}")
+        lines.append("")
+    elif "contingency_table" in stats:
+        lines.append("## 8. Statistical Significance")
+        lines.append("")
+        ct = stats["contingency_table"]
+        lines.append("| Category | Count |")
+        lines.append("|----------|-------|")
+        lines.append(f"| B/C (both correct) | {ct['baseline_correct_rag_correct']} |")
+        lines.append(f"| B correct, RAG wrong | {ct['baseline_correct_rag_wrong']} |")
+        lines.append(f"| B wrong, RAG correct | {ct['baseline_wrong_rag_correct']} |")
+        lines.append(f"| Both wrong | {ct['baseline_wrong_rag_wrong']} |")
+        lines.append("")
+
+    # 9. Cross-Dimensional Analysis
+    if cross_analysis:
+        lines.append("## 9. Cross-Dimensional Analysis")
+        lines.append("")
+
+        type_result = cross_analysis.get("type_vs_result", {})
+        if type_result:
+            lines.append("### Question Type × Result Classification")
+            lines.append("")
+            lines.append("| Type | Total | Both Correct | RAG Improved | RAG Regressed | Both Wrong |")
+            lines.append("|------|-------|-------------|-------------|--------------|-----------|")
+            for qtype, data in type_result.items():
+                lines.append(
+                    f"| {qtype} | {data['total']} "
+                    f"| {data['both_correct']['percentage']:.1f}% "
+                    f"| {data['rag_improved']['percentage']:.1f}% "
+                    f"| {data['rag_regressed']['percentage']:.1f}% "
+                    f"| {data['both_wrong']['percentage']:.1f}% |"
+                )
+
+        chunk_acc = cross_analysis.get("chunk_count_vs_accuracy", {})
+        if chunk_acc:
+            lines.append("")
+            lines.append("### Chunk Count × RAG Accuracy")
+            lines.append("")
+            lines.append("| Chunk Count | RAG Accuracy | Sample Count |")
+            lines.append("|-------------|-------------|-------------|")
+            for key, data in chunk_acc.items():
+                lines.append(f"| {key} | {data['rag_accuracy']:.1f}% | {data['sample_count']} |")
+
+        judge_dist = cross_analysis.get("judge_score_distribution", {})
+        if judge_dist:
+            lines.append("")
+            lines.append("### Judge Score Distribution (Short Answer)")
+            lines.append("")
+            lines.append("| Bucket | Percentage |")
+            lines.append("|--------|-----------|")
+            for bucket, data in judge_dist.items():
+                lines.append(f"| {bucket} | {data['percentage']:.1f}% |")
+        lines.append("")
+
+    # 10. Task-Level Recall Analysis
+    if task_recall:
+        lines.append("## 10. Task-Level Recall Analysis (召回率分析)")
+        lines.append("")
+
+        recall_metrics = task_recall.get("metrics", {})
+        contingency = task_recall.get("contingency_summary", {})
+
+        lines.append("### 召回率指标汇总")
+        lines.append("")
+        lines.append("| Category | Count |")
+        lines.append("|----------|-------|")
+        lines.append(f"| 评估总数 | {contingency.get('total_evaluated', 0)} |")
+        lines.append(f"| Both Correct | {contingency.get('both_correct', 0)} |")
+        lines.append(f"| RAG Improved | {contingency.get('rag_improved', 0)} |")
+        lines.append(f"| RAG Regressed | {contingency.get('rag_regressed', 0)} |")
+        lines.append(f"| Both Wrong | {contingency.get('both_wrong', 0)} |")
+        lines.append("")
+
+        # RAG Retrieval Recall
+        rr = recall_metrics.get("rag_retrieval_recall", {})
+        if rr.get("denominator", 0) > 0:
+            lines.append("### RAG Retrieval Recall (检索召回率)")
+            lines.append("")
+            lines.append(f"- **召回率:** {rr.get('percentage', 0):.1f}% ({rr.get('numerator', 0)}/{rr.get('denominator', 0)})")
+            lines.append(f"- **含义:** 在需要外部知识的问题中,RAG正确回答的比例")
+            lines.append(f"- **评价:** {rr.get('interpretation', '')}")
+            lines.append("")
+
+        # RAG Effectiveness Rate
+        er = recall_metrics.get("rag_effectiveness_rate", {})
+        if er.get("denominator", 0) > 0:
+            lines.append("### RAG Effectiveness (RAG有效率)")
+            lines.append("")
+            lines.append(f"- **有效率:** {er.get('percentage', 0):.1f}% ({er.get('numerator', 0)}/{er.get('denominator', 0)})")
+            lines.append(f"- **含义:** 当RAG介入改变答案时,正面vs负面的比例")
+            lines.append(f"- **评价:** {er.get('interpretation', '')}")
+            lines.append("")
+
+        # Knowledge Gap Coverage
+        kgc = recall_metrics.get("knowledge_gap_coverage", {})
+        if kgc.get("total_needed", 0) > 0:
+            lines.append("### Knowledge Gap Coverage (知识缺口覆盖率)")
+            lines.append("")
+            lines.append(f"- **覆盖率:** {kgc.get('percentage', 0):.1f}% ({kgc.get('covered', 0)}/{kgc.get('total_needed', 0)})")
+            lines.append(f"- **含义:** 语料库对知识缺口的覆盖程度")
+            lines.append(f"- **评价:** {kgc.get('interpretation', '')}")
+            lines.append("")
+
+        # Baseline Dependency
+        bd = recall_metrics.get("baseline_dependency", {})
+        if "value" in bd:
+            lines.append("### Baseline Dependency (系统依赖度)")
+            lines.append("")
+            lines.append(f"- **依赖度:** {bd.get('percentage', 0):.1f}%")
+            lines.append(f"- **评价:** {bd.get('interpretation', '')}")
+            lines.append("")
+
+        # RAG Contribution
+        rc = recall_metrics.get("rag_contribution", {})
+        if "value" in rc:
+            lines.append("### RAG Contribution (RAG贡献度)")
+            lines.append("")
+            lines.append(f"- **贡献度:** {rc.get('percentage', 0):.1f}%")
+            lines.append(f"- **评价:** {rc.get('interpretation', '')}")
+            lines.append("")
+
+        # RAG Harm Rate
+        hr = recall_metrics.get("rag_harm_rate", {})
+        if "value" in hr:
+            lines.append("### RAG Harm Rate (RAG有害率)")
+            lines.append("")
+            lines.append(f"- **有害率:** {hr.get('percentage', 0):.1f}% ({hr.get('numerator', 0)}/{hr.get('denominator', 0)})")
+            lines.append(f"- **含义:** RAG导致原本正确的答案变错的比例")
+            lines.append(f"- **评价:** {hr.get('interpretation', '')}")
+            lines.append("")
+
+        # Precision-Recall Summary
+        prs = recall_metrics.get("precision_recall_summary", {})
+        if prs:
+            lines.append("### Precision-Recall Summary")
+            lines.append("")
+            p = prs.get("precision", {})
+            r = prs.get("recall", {})
+            f1 = prs.get("f1_score", {})
+            lines.append("| Metric | Value |")
+            lines.append("|--------|-------|")
+            lines.append(f"| Precision (精确率) | {p.get('percentage', 0):.1f}% |")
+            lines.append(f"| Recall (召回率) | {r.get('percentage', 0):.1f}% |")
+            lines.append(f"| F1 Score | {f1.get('percentage', 0):.1f}% |")
+            lines.append("")
+
+        # By Question Type
+        by_type = task_recall.get("by_question_type", {})
+        if by_type:
+            lines.append("### 按问题类型细分指标")
+            lines.append("")
+            lines.append("| Type | Total | 召回率 | 有害率 |")
+            lines.append("|------|-------|--------|--------|")
+            for qtype, data in by_type.items():
+                lines.append(f"| {qtype} | {data['total']} | {data['retrieval_recall_pct']:.1f}% | {data['harm_rate_pct']:.1f}% |")
+            lines.append("")
+
+    # 11. Sample Cases
+    lines.append("## 11. Sample Cases")
+    lines.append("")
+
+    if categories["rag_improved"]["count"] > 0:
+        lines.append("### RAG Improved (Sample)")
+        lines.append("")
+        improved_df = get_error_cases(df, "rag_improved")
+        for i, (_, row) in enumerate(improved_df.head(3).iterrows()):
+            lines.append(f"**Case {i + 1}:**")
+            lines.append("")
+            lines.append(format_question_details(row))
+            lines.append("")
+
+    if categories["rag_regressed"]["count"] > 0:
+        lines.append("### RAG Regressed (Sample)")
+        lines.append("")
+        regressed_df = get_error_cases(df, "rag_regressed")
+        for i, (_, row) in enumerate(regressed_df.head(3).iterrows()):
+            lines.append(f"**Case {i + 1}:**")
+            lines.append("")
+            lines.append(format_question_details(row))
+            lines.append("")
+
+    report = "\n".join(lines)
+
+    if output_path:
+        Path(output_path).write_text(report, encoding="utf-8")
+        print(f"Markdown report saved to: {output_path}")
+
+    return report
+
+
 def generate_json_summary(
     metrics: dict,
     categories: dict,
@@ -1691,6 +2082,11 @@ def main():
         "--json", "-j",
         metavar="PATH",
         help="Output path for JSON summary",
+    )
+    parser.add_argument(
+        "--md",
+        metavar="PATH",
+        help="Output path for Markdown report",
     )
     parser.add_argument(
         "--export", "-e",
@@ -1792,6 +2188,13 @@ def main():
             metrics, categories, retrieval_quality, difficulty,
             answer_quality, error_patterns, stats, cross_analysis,
             task_recall, args.json
+        )
+
+    if args.md:
+        generate_markdown_report(
+            df, metrics, categories, retrieval_quality, difficulty,
+            answer_quality, error_patterns, stats, cross_analysis,
+            task_recall, args.md
         )
 
     if args.export:

@@ -4,6 +4,7 @@ CODEBUDDY.md
 .env
 *.pyc
 .DS_Store
+*/.DS_Store
 
 # Build artifacts and indexes
 artifacts/

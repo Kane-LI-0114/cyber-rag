@@ -172,9 +172,11 @@ A convenient `run.sh` script is provided for common operations:
 ./run.sh analyze                       # Quick summary of latest results
 ./run.sh analyze -v                    # Detailed text report
 ./run.sh analyze --report report.txt  # Save text report to file
+./run.sh analyze --md report.md       # Save Markdown report to file
 ./run.sh analyze --json summary.json   # Save JSON summary
 ./run.sh analyze -e rag_regressed      # Export RAG-regressed cases to CSV
-./run.sh analyze eval_datasets/test.jsonl  # Analyze specific file
+./run.sh analyze artifacts/evals/eval_20260417.csv --md report.md  # Analyze specific CSV & save MD
+./run.sh analyze artifacts/evals/eval_20260417.csv --json summary.json  # Analyze specific CSV & save JSON
 
 # Testing
 ./run.sh test               # Run all tests
@@ -512,6 +514,7 @@ from scripts.analyze_eval import (
     
     # Report generation
     generate_comprehensive_report,
+    generate_markdown_report,
     generate_json_summary,
     export_error_cases,
     
@@ -531,6 +534,15 @@ report = generate_comprehensive_report(
     retrieval_quality, difficulty,
     answer_quality, error_patterns,
     stats, cross_analysis, task_recall
+)
+
+# Generate Markdown report (suitable for saving as .md)
+md_report = generate_markdown_report(
+    df, metrics, categories,
+    retrieval_quality, difficulty,
+    answer_quality, error_patterns,
+    stats, cross_analysis, task_recall,
+    output_path="artifacts/evals/report.md"
 )
 ```
 
