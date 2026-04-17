@@ -118,9 +118,11 @@ pyproject.toml            # Standard package metadata and console scripts
    │    • Similarity search over FAISS index                             │
    │    • Return k most relevant chunks with full metadata               │
    │                                                                     │
-   │  Generation (Two Modes):                                            │
-   │    • Baseline: Direct LLM answering without retrieval               │
-   │    • RAG: Context-augmented answering with retrieved evidence       │
+│  Generation (Two Modes):                                            │
+│    • Baseline: Direct LLM answering without retrieval               │
+│    • RAG: Context-augmented answering with retrieved evidence       │
+│    • Providers: Azure OpenAI, OneAPI, HuggingFace Inference API,   │
+│                 Local HuggingFace (Mistral-7B)                      │
    │                                                                     │
    │  Supported Question Types:                                          │
    │    • Short answer (free-form text)                                  │
@@ -413,7 +415,7 @@ The system includes a comprehensive evaluation analysis script (`scripts/analyze
 
 ### Analysis Dimensions
 
-The analysis module provides **9 major analysis dimensions**:
+The analysis module provides **10 major analysis dimensions**:
 
 #### 1. Basic Accuracy Metrics
 - Overall and per-question-type (MCQ/Short Answer) accuracy
@@ -475,6 +477,21 @@ Classifies questions into four categories:
 #### 9. Sample Case Export
 - Export specific error categories to CSV for targeted analysis
 
+#### 10. Task-Level Recall Analysis
+Evaluates RAG retrieval effectiveness through task-level metrics derived from the four-category classification:
+
+| Metric | Description | Formula |
+|--------|-------------|---------|
+| **RAG Retrieval Recall** | Proportion of knowledge-dependent questions RAG answers correctly | rag_improved / (rag_improved + both_wrong) |
+| **RAG Effectiveness Rate** | Positive vs negative impact when RAG changes the answer | rag_improved / (rag_improved + rag_regressed) |
+| **Knowledge Gap Coverage** | How well the corpus covers the knowledge gaps | (both_correct + rag_improved) / total |
+| **RAG Harm Rate** | Proportion of questions where RAG causes regression | rag_regressed / total |
+| **Baseline Dependency** | Fraction of questions requiring external knowledge | (rag_improved + both_wrong) / total |
+| **RAG Contribution** | RAG's contribution to overall accuracy | rag_improved / total |
+| **Precision-Recall-F1** | Standard PRF summary with task-level recall | Precision / Recall / F1 |
+
+All metrics are also computed per question type (MCQ vs short answer) for fine-grained analysis.
+
 ### Python API
 
 ```python
@@ -491,6 +508,7 @@ from scripts.analyze_eval import (
     mine_error_patterns,
     calculate_statistical_significance,
     analyze_cross_dimensions,
+    analyze_task_recall,          # Task-level recall metrics (方案B)
     
     # Report generation
     generate_comprehensive_report,
@@ -505,13 +523,14 @@ from scripts.analyze_eval import (
 df = load_evaluation_data("artifacts/evals/eval_20260417.csv")
 metrics = calculate_accuracy_metrics(df)
 stats = calculate_statistical_significance(df)
+task_recall = analyze_task_recall(df)  # Recall, Harm Rate, F1, etc.
 
 # Generate full report
 report = generate_comprehensive_report(
     df, metrics, categories,
     retrieval_quality, difficulty,
     answer_quality, error_patterns,
-    stats, cross_analysis
+    stats, cross_analysis, task_recall
 )
 ```
 

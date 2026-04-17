@@ -784,6 +784,285 @@ def _interpret_cohens_h(h: float) -> str:
 
 
 # =============================================================================
+# 10. Task-Level Recall Analysis (方案B)
+# =============================================================================
+
+
+def analyze_task_recall(df: pd.DataFrame) -> dict:
+    """
+    计算任务级别的召回率指标 (Task-Level Recall / 召回率)
+    
+    方案B的核心思路：基于现有的4分类结果，计算RAG系统的召回能力
+    
+    召回率指标定义:
+    1. RAG Retrieval Recall (检索召回率):
+       - 含义: 需要外部知识的问题中,RAG能正确回答的比例
+       - 公式: (rag_improved) / (rag_improved + both_wrong)
+       - 解释: 在baseline无法回答的问题中,RAG成功"召回"正确答案的比例
+    
+    2. RAG Effectiveness Rate (RAG有效率):
+       - 含义: RAG改变答案时,改善vs退化的比例
+       - 公式: (rag_improved) / (rag_improved + rag_regressed)
+       - 解释: 当RAG介入时,产生正面效果的概率
+    
+    3. Knowledge Gap Coverage (知识缺口覆盖率):
+       - 含义: 评估语料库覆盖了多少知识缺口
+       - 公式: (both_correct + rag_improved) / (both_correct + rag_improved + both_wrong)
+       - 解释: 所有需要回答的问题中,最终被正确回答的比例
+    
+    4. RAG Harm Rate (RAG有害率):
+       - 含义: RAG导致原本正确的答案变错的比例
+       - 公式: rag_regressed / total
+       - 解释: 衡量RAG造成负面影响的概率
+    
+    5. Precision-Recall Summary:
+       - RAG Precision: RAG正确率 = (both_correct + rag_improved) / total
+       - RAG Recall: 见上方定义
+       - F1: 2 * P * R / (P + R)
+    """
+    dfm = _completed_rows(df)
+    n = len(dfm)
+    denom = n if n > 0 else 1
+    
+    # 获取4分类的数量
+    both_correct = ((dfm["baseline_correct"] == True) & (dfm["rag_correct"] == True)).sum()
+    both_wrong = ((dfm["baseline_correct"] == False) & (dfm["rag_correct"] == False)).sum()
+    rag_improved = ((dfm["baseline_correct"] == False) & (dfm["rag_correct"] == True)).sum()
+    rag_regressed = ((dfm["baseline_correct"] == True) & (dfm["rag_correct"] == False)).sum()
+    
+    result = {
+        "contingency_summary": {
+            "both_correct": int(both_correct),
+            "both_wrong": int(both_wrong),
+            "rag_improved": int(rag_improved),
+            "rag_regressed": int(rag_regressed),
+            "total_evaluated": int(n),
+        },
+        "metrics": {},
+    }
+    
+    # 1. RAG Retrieval Recall (检索召回率)
+    # 衡量RAG在需要外部知识的问题上的表现
+    need_retrieval = rag_improved + both_wrong  # 需要检索才能回答的问题
+    if need_retrieval > 0:
+        retrieval_recall = rag_improved / need_retrieval
+        result["metrics"]["rag_retrieval_recall"] = {
+            "value": float(retrieval_recall),
+            "percentage": float(retrieval_recall * 100),
+            "numerator": int(rag_improved),  # RAG成功召回
+            "denominator": int(need_retrieval),  # 需要召回的总数
+            "description": "RAG Retrieval Recall: 在需要外部知识的问题中,RAG正确回答的比例",
+            "interpretation": _interpret_recall(retrieval_recall),
+        }
+    else:
+        result["metrics"]["rag_retrieval_recall"] = {
+            "value": 0.0,
+            "percentage": 0.0,
+            "numerator": 0,
+            "denominator": 0,
+            "description": "RAG Retrieval Recall: 无需检索的问题",
+            "interpretation": "所有问题都被baseline正确回答",
+        }
+    
+    # 2. RAG Effectiveness Rate (RAG有效率)
+    # 衡量当RAG介入改变答案时的有效性
+    rag_intervention = rag_improved + rag_regressed  # RAG改变了答案的情况
+    if rag_intervention > 0:
+        effectiveness_rate = rag_improved / rag_intervention
+        result["metrics"]["rag_effectiveness_rate"] = {
+            "value": float(effectiveness_rate),
+            "percentage": float(effectiveness_rate * 100),
+            "numerator": int(rag_improved),  # 改善
+            "denominator": int(rag_intervention),  # 改变总数
+            "description": "RAG Effectiveness: 当RAG介入时,产生正面效果的比例",
+            "interpretation": _interpret_effectiveness(effectiveness_rate),
+        }
+    else:
+        result["metrics"]["rag_effectiveness_rate"] = {
+            "value": 0.0,
+            "percentage": 0.0,
+            "numerator": 0,
+            "denominator": 0,
+            "description": "RAG Effectiveness: RAG未改变任何答案",
+            "interpretation": "RAG对答案无影响",
+        }
+    
+    # 3. Knowledge Gap Coverage (知识缺口覆盖率)
+    # 衡量语料库覆盖了多少需要回答的问题
+    total_knowledge_needed = both_correct + rag_improved + both_wrong
+    if total_knowledge_needed > 0:
+        coverage = (both_correct + rag_improved) / total_knowledge_needed
+        result["metrics"]["knowledge_gap_coverage"] = {
+            "value": float(coverage),
+            "percentage": float(coverage * 100),
+            "covered": int(both_correct + rag_improved),
+            "total_needed": int(total_knowledge_needed),
+            "description": "Knowledge Gap Coverage: 语料库对知识缺口的覆盖程度",
+            "interpretation": _interpret_coverage(coverage),
+        }
+    else:
+        result["metrics"]["knowledge_gap_coverage"] = {
+            "value": 0.0,
+            "percentage": 0.0,
+            "covered": 0,
+            "total_needed": 0,
+            "description": "Knowledge Gap Coverage: 无问题需要回答",
+            "interpretation": "无数据",
+        }
+    
+    # 4. Precision-Recall Summary (精确率-召回率汇总)
+    rag_precision = (both_correct + rag_improved) / denom if denom > 0 else 0
+    rag_recall_for_f1 = retrieval_recall if need_retrieval > 0 else 0
+    if rag_precision + rag_recall_for_f1 > 0:
+        f1_score = 2 * rag_precision * rag_recall_for_f1 / (rag_precision + rag_recall_for_f1)
+    else:
+        f1_score = 0.0
+    
+    result["metrics"]["precision_recall_summary"] = {
+        "precision": {
+            "value": float(rag_precision),
+            "percentage": float(rag_precision * 100),
+            "description": "RAG Precision: RAG正确率",
+        },
+        "recall": {
+            "value": float(rag_recall_for_f1),
+            "percentage": float(rag_recall_for_f1 * 100),
+            "description": "RAG Recall: 检索召回率",
+        },
+        "f1_score": {
+            "value": float(f1_score),
+            "percentage": float(f1_score * 100),
+            "description": "F1 Score: 精确率和召回率的调和平均",
+        },
+    }
+    
+    # 5. Baseline依赖度分析
+    # 衡量系统对外部知识的依赖程度
+    if denom > 0:
+        baseline_dependency = (both_wrong + rag_improved) / denom  # 需要RAG的问题占比
+        result["metrics"]["baseline_dependency"] = {
+            "value": float(baseline_dependency),
+            "percentage": float(baseline_dependency * 100),
+            "description": "Baseline Dependency: 系统对外部知识的依赖程度",
+            "interpretation": (
+                "高依赖 (>50%): 大量问题需要检索辅助"
+                if baseline_dependency > 0.5
+                else "中依赖 (20-50%): 部分问题需要检索"
+                if baseline_dependency > 0.2
+                else "低依赖 (<20%): 大多数问题可由baseline回答"
+            ),
+        }
+        
+        # RAG贡献度
+        rag_contribution = rag_improved / denom
+        result["metrics"]["rag_contribution"] = {
+            "value": float(rag_contribution),
+            "percentage": float(rag_contribution * 100),
+            "description": "RAG Contribution: RAG对整体准确率的贡献",
+            "interpretation": (
+                "RAG贡献显著" if rag_contribution > 0.1
+                else "RAG贡献一般" if rag_contribution > 0.05
+                else "RAG贡献较小"
+            ),
+        }
+        
+        # RAG Harm Rate (RAG有害率)
+        # 衡量RAG造成负面影响的概率
+        rag_harm_rate = rag_regressed / denom if denom > 0 else 0.0
+        result["metrics"]["rag_harm_rate"] = {
+            "value": float(rag_harm_rate),
+            "percentage": float(rag_harm_rate * 100),
+            "numerator": int(rag_regressed),
+            "denominator": int(denom),
+            "description": "RAG Harm Rate: RAG导致答案变错的比例",
+            "interpretation": (
+                "高有害率 (>10%): RAG严重干扰正确回答"
+                if rag_harm_rate > 0.1
+                else "中有害率 (5-10%): RAG有时会干扰"
+                if rag_harm_rate > 0.05
+                else "低有害率 (<5%): RAG几乎不会造成负面影响"
+            ),
+        }
+    
+    # 按问题类型细分召回率
+    if "question_type" in dfm.columns:
+        result["by_question_type"] = {}
+        for qtype in dfm["question_type"].unique():
+            type_df = dfm[dfm["question_type"] == qtype]
+            type_n = len(type_df)
+            if type_n == 0:
+                continue
+            
+            type_both_correct = ((type_df["baseline_correct"] == True) & 
+                               (type_df["rag_correct"] == True)).sum()
+            type_both_wrong = ((type_df["baseline_correct"] == False) & 
+                             (type_df["rag_correct"] == False)).sum()
+            type_rag_improved = ((type_df["baseline_correct"] == False) & 
+                                (type_df["rag_correct"] == True)).sum()
+            type_rag_regressed = ((type_df["baseline_correct"] == True) & 
+                                 (type_df["rag_correct"] == False)).sum()
+            
+            type_need_retrieval = type_rag_improved + type_both_wrong
+            type_recall = type_rag_improved / type_need_retrieval if type_need_retrieval > 0 else 0.0
+            
+            type_harm_rate = type_rag_regressed / type_n if type_n > 0 else 0.0
+            
+            result["by_question_type"][qtype] = {
+                "total": int(type_n),
+                "rag_improved": int(type_rag_improved),
+                "both_wrong": int(type_both_wrong),
+                "retrieval_recall": float(type_recall),
+                "retrieval_recall_pct": float(type_recall * 100),
+                "harm_rate": float(type_harm_rate),
+                "harm_rate_pct": float(type_harm_rate * 100),
+            }
+    
+    return result
+
+
+def _interpret_recall(recall: float) -> str:
+    """解释检索召回率的含义"""
+    if recall >= 0.9:
+        return "优秀: RAG几乎能召回所有需要检索的知识"
+    elif recall >= 0.7:
+        return "良好: RAG能召回大部分需要检索的知识"
+    elif recall >= 0.5:
+        return "一般: RAG能召回约半数需要检索的知识"
+    elif recall >= 0.3:
+        return "较差: RAG对需要检索的问题召回率不足"
+    else:
+        return "很差: RAG几乎无法召回需要检索的知识"
+
+
+def _interpret_effectiveness(rate: float) -> str:
+    """解释RAG有效率的含义"""
+    if rate >= 0.8:
+        return "优秀: RAG介入几乎总是正面的"
+    elif rate >= 0.6:
+        return "良好: RAG介入多数时候是有效的"
+    elif rate >= 0.4:
+        return "一般: RAG介入效果参半"
+    elif rate >= 0.2:
+        return "较差: RAG介入更多是负面的"
+    else:
+        return "很差: RAG介入几乎总是负面的"
+
+
+def _interpret_coverage(coverage: float) -> str:
+    """解释知识缺口覆盖率的含义"""
+    if coverage >= 0.9:
+        return "优秀: 语料库覆盖了绝大多数知识缺口"
+    elif coverage >= 0.7:
+        return "良好: 语料库覆盖了大部分知识缺口"
+    elif coverage >= 0.5:
+        return "一般: 语料库覆盖了约半数知识缺口"
+    elif coverage >= 0.3:
+        return "较差: 语料库覆盖不足"
+    else:
+        return "很差: 语料库覆盖严重不足"
+
+
+# =============================================================================
 # 7. Cross-Dimensional Analysis
 # =============================================================================
 
@@ -981,6 +1260,7 @@ def generate_comprehensive_report(
     error_patterns: dict,
     stats: dict,
     cross_analysis: dict,
+    task_recall: Optional[dict] = None,
     output_path: Optional[str] = None,
 ) -> str:
     """Generate a comprehensive text report."""
@@ -1216,7 +1496,91 @@ def generate_comprehensive_report(
                 lines.append(f"  {bucket}: {data['percentage']:.1f}%")
         lines.append("")
 
-    # Sample Cases
+    # 10. Task-Level Recall Analysis (方案B)
+    if task_recall:
+        lines.append("## 10. Task-Level Recall Analysis (召回率分析)")
+        lines.append("-" * 40)
+        
+        recall_metrics = task_recall.get("metrics", {})
+        contingency = task_recall.get("contingency_summary", {})
+        
+        lines.append("\n### 召回率指标汇总")
+        lines.append(f"  评估总数: {contingency.get('total_evaluated', 0)}")
+        lines.append(f"  Both Correct: {contingency.get('both_correct', 0)}")
+        lines.append(f"  RAG Improved: {contingency.get('rag_improved', 0)}")
+        lines.append(f"  RAG Regressed: {contingency.get('rag_regressed', 0)}")
+        lines.append(f"  Both Wrong: {contingency.get('both_wrong', 0)}")
+        
+        # RAG Retrieval Recall
+        rr = recall_metrics.get("rag_retrieval_recall", {})
+        if rr.get("denominator", 0) > 0:
+            lines.append(f"\n### RAG Retrieval Recall (检索召回率)")
+            lines.append(f"  召回率: {rr.get('percentage', 0):.1f}% ({rr.get('numerator', 0)}/{rr.get('denominator', 0)})")
+            lines.append(f"  含义: 在需要外部知识的问题中,RAG正确回答的比例")
+            lines.append(f"  评价: {rr.get('interpretation', '')}")
+        
+        # RAG Effectiveness Rate
+        er = recall_metrics.get("rag_effectiveness_rate", {})
+        if er.get("denominator", 0) > 0:
+            lines.append(f"\n### RAG Effectiveness (RAG有效率)")
+            lines.append(f"  有效率: {er.get('percentage', 0):.1f}% ({er.get('numerator', 0)}/{er.get('denominator', 0)})")
+            lines.append(f"  含义: 当RAG介入改变答案时,正面vs负面的比例")
+            lines.append(f"  评价: {er.get('interpretation', '')}")
+        
+        # Knowledge Gap Coverage
+        kgc = recall_metrics.get("knowledge_gap_coverage", {})
+        if kgc.get("total_needed", 0) > 0:
+            lines.append(f"\n### Knowledge Gap Coverage (知识缺口覆盖率)")
+            lines.append(f"  覆盖率: {kgc.get('percentage', 0):.1f}% ({kgc.get('covered', 0)}/{kgc.get('total_needed', 0)})")
+            lines.append(f"  含义: 语料库对知识缺口的覆盖程度")
+            lines.append(f"  评价: {kgc.get('interpretation', '')}")
+        
+        # Baseline Dependency
+        bd = recall_metrics.get("baseline_dependency", {})
+        if "value" in bd:
+            lines.append(f"\n### Baseline Dependency (系统依赖度)")
+            lines.append(f"  依赖度: {bd.get('percentage', 0):.1f}%")
+            lines.append(f"  评价: {bd.get('interpretation', '')}")
+        
+        # RAG Contribution
+        rc = recall_metrics.get("rag_contribution", {})
+        if "value" in rc:
+            lines.append(f"\n### RAG Contribution (RAG贡献度)")
+            lines.append(f"  贡献度: {rc.get('percentage', 0):.1f}%")
+            lines.append(f"  评价: {rc.get('interpretation', '')}")
+        
+        # RAG Harm Rate
+        hr = recall_metrics.get("rag_harm_rate", {})
+        if "value" in hr:
+            lines.append(f"\n### RAG Harm Rate (RAG有害率)")
+            lines.append(f"  有害率: {hr.get('percentage', 0):.1f}% ({hr.get('numerator', 0)}/{hr.get('denominator', 0)})")
+            lines.append(f"  含义: RAG导致原本正确的答案变错的比例")
+            lines.append(f"  评价: {hr.get('interpretation', '')}")
+        
+        # Precision-Recall Summary
+        prs = recall_metrics.get("precision_recall_summary", {})
+        if prs:
+            lines.append(f"\n### Precision-Recall Summary")
+            p = prs.get("precision", {})
+            r = prs.get("recall", {})
+            f = prs.get("f1_score", {})
+            lines.append(f"  Precision (精确率): {p.get('percentage', 0):.1f}%")
+            lines.append(f"  Recall (召回率): {r.get('percentage', 0):.1f}%")
+            lines.append(f"  F1 Score: {f.get('percentage', 0):.1f}%")
+        
+        # By Question Type
+        by_type = task_recall.get("by_question_type", {})
+        if by_type:
+            lines.append(f"\n### 按问题类型细分指标")
+            for qtype, data in by_type.items():
+                lines.append(f"\n  {qtype}:")
+                lines.append(f"    总数: {data['total']}")
+                lines.append(f"    召回率: {data['retrieval_recall_pct']:.1f}%")
+                lines.append(f"    有害率: {data['harm_rate_pct']:.1f}%")
+        
+        lines.append("")
+
+    # 11. Sample Cases
     lines.append("## 10. Sample Cases")
     lines.append("-" * 40)
     
@@ -1259,6 +1623,7 @@ def generate_json_summary(
     error_patterns: dict,
     stats: dict,
     cross_analysis: dict,
+    task_recall: Optional[dict] = None,
     output_path: Optional[str] = None,
 ) -> dict:
     """Generate a comprehensive JSON summary."""
@@ -1271,6 +1636,7 @@ def generate_json_summary(
         "error_patterns": error_patterns,
         "statistical_significance": stats,
         "cross_dimensional_analysis": cross_analysis,
+        "task_recall": task_recall or {},
     }
 
     if output_path:
@@ -1370,6 +1736,7 @@ def main():
     error_patterns = mine_error_patterns(df)
     stats = calculate_statistical_significance(df)
     cross_analysis = analyze_cross_dimensions(df)
+    task_recall = analyze_task_recall(df)  # 方案B: 任务级别召回率分析
 
     # Print quick summary
     print("\n" + "=" * 60)
@@ -1389,6 +1756,18 @@ def main():
     diff_score = difficulty.get("overall_score", {}).get("normalized_0_100", 0)
     print(f"\nQuestion Difficulty Score: {diff_score:.1f}/100")
     
+    # Task-level recall (方案B)
+    recall_metrics = task_recall.get("metrics", {})
+    rr = recall_metrics.get("rag_retrieval_recall", {})
+    er = recall_metrics.get("rag_effectiveness_rate", {})
+    hr = recall_metrics.get("rag_harm_rate", {})
+    if rr.get("denominator", 0) > 0:
+        print(f"\n[方案B] RAG Retrieval Recall: {rr.get('percentage', 0):.1f}%")
+    if er.get("denominator", 0) > 0:
+        print(f"[方案B] RAG Effectiveness: {er.get('percentage', 0):.1f}%")
+    if "value" in hr:
+        print(f"[方案B] RAG Harm Rate: {hr.get('percentage', 0):.1f}%")
+    
     # Statistical significance
     p_val = stats.get("mcnemar_test", {}).get("p_value", 1)
     if p_val < 1:
@@ -1403,7 +1782,7 @@ def main():
         report = generate_comprehensive_report(
             df, metrics, categories, retrieval_quality, difficulty,
             answer_quality, error_patterns, stats, cross_analysis,
-            args.report
+            task_recall, args.report
         )
         if args.verbose:
             print("\n" + report)
@@ -1412,7 +1791,7 @@ def main():
         generate_json_summary(
             metrics, categories, retrieval_quality, difficulty,
             answer_quality, error_patterns, stats, cross_analysis,
-            args.json
+            task_recall, args.json
         )
 
     if args.export:
