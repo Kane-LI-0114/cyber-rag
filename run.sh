@@ -38,7 +38,8 @@ show_help() {
     echo ""
     echo -e "${GREEN}[查询与评估]${NC}"
     echo "  query <问题>        单条检索问答"
-    echo "  eval <数据集路径>   批量评估 (baseline vs RAG)"
+    echo "  eval <别名/路径>    批量评估 (baseline vs RAG)"
+    echo "                      别名: CM-01-v1, CM-01-v2, CM-80, CM-500, SecQA, CTF-MC, CTF-SA, test"
     echo ""
     echo -e "${GREEN}[评估分析]${NC}"
     echo "  analyze [CSV路径]    分析评估结果 (默认: 最新带时间戳的CSV文件)"
@@ -59,7 +60,9 @@ show_help() {
     echo "  ./run.sh setup"
     echo "  ./run.sh build-index"
     echo "  ./run.sh query \"什么是XSS攻击？\""
-    echo "  ./run.sh eval CyberMetric-80-v1.jsonl"
+    echo "  ./run.sh eval CM-80"
+    echo "  ./run.sh eval CM-500"
+    echo "  ./run.sh eval SecQA"
 }
 
 # 环境配置
@@ -114,12 +117,61 @@ run_query() {
 # 批量评估
 run_eval() {
     if [ -z "$1" ]; then
-        echo -e "${RED}错误: 请提供数据集路径${NC}"
-        echo "用法: ./run.sh eval <数据集路径>"
+        echo -e "${RED}错误: 请提供数据集路径或别名${NC}"
+        echo "用法: ./run.sh eval <数据集路径或别名>"
+        echo ""
+        echo "支持的别名:"
+        echo "  CM-01-v1, CM-01-v2     -> CyberMetric-01 数据集 (1条)"
+        echo "  CM-80, CM-80-v1        -> CyberMetric-80 数据集 (80条)"
+        echo "  CM-500, CM-500-v1      -> CyberMetric-500 数据集 (500条)"
+        echo "  SecQA                  -> SecQA 安全问答数据集"
+        echo "  CTF-MC                 -> CTFKnow 多选题数据集"
+        echo "  CTF-SA                 -> CTFKnow 简答题数据集"
+        echo "  test                   -> 测试数据集"
+        echo ""
+        echo "示例:"
+        echo "  ./run.sh eval CM-80"
+        echo "  ./run.sh eval eval_datasets/CyberMetric-80-v1.jsonl"
         exit 1
     fi
+
     local dataset="$1"
     local output=${2:-artifacts/evals/$(date +%Y%m%d_%H%M%S).csv}
+
+    # 解析别名
+    case "$dataset" in
+        CM-01-v1|cm-01-v1)
+            dataset="eval_datasets/CyberMetric-01-v1.jsonl"
+            ;;
+        CM-01-v2|cm-01-v2)
+            dataset="eval_datasets/CyberMetric-01-v2.jsonl"
+            ;;
+        CM-80|cm-80|CM-80-v1|cm-80-v1)
+            dataset="eval_datasets/CyberMetric-80-v1.jsonl"
+            ;;
+        CM-500|cm-500|CM-500-v1|cm-500-v1)
+            dataset="eval_datasets/CyberMetric-500-v1.jsonl"
+            ;;
+        SecQA|secqa|SECQA)
+            dataset="eval_datasets/SecQA.jsonl"
+            ;;
+        CTF-MC|ctf-mc|CTFMC|ctfmc)
+            dataset="eval_datasets/ctfknow_multiple_choice.jsonl"
+            ;;
+        CTF-SA|ctf-sa|CTFSA|ctfsa)
+            dataset="eval_datasets/ctfknow_short_answer.jsonl"
+            ;;
+        test|TEST)
+            dataset="eval_datasets/test.jsonl"
+            ;;
+    esac
+
+    # 检查文件是否存在
+    if [ ! -f "$dataset" ]; then
+        echo -e "${RED}错误: 数据集文件不存在: $dataset${NC}"
+        exit 1
+    fi
+
     echo -e "${YELLOW}>>> 批量评估: $dataset${NC}"
     conda activate cyber-rag
     python -m cyber_rag.cli.run_eval "$dataset" \

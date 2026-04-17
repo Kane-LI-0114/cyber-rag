@@ -53,6 +53,16 @@ scripts/
 ├── run_eval.py           # Thin compatibility wrapper for batch evaluation
 └── analyze_eval.py       # Evaluation results analysis and reporting
 
+eval_datasets/            # Evaluation datasets folder
+├── CyberMetric-01-v1.jsonl
+├── CyberMetric-01-v2.jsonl
+├── CyberMetric-80-v1.jsonl
+├── CyberMetric-500-v1.jsonl
+├── SecQA.jsonl
+├── ctfknow_multiple_choice.jsonl
+├── ctfknow_short_answer.jsonl
+└── test.jsonl
+
 tests/
 └── test_chunking.py      # Metadata-preservation smoke test
 
@@ -143,7 +153,12 @@ A convenient `run.sh` script is provided for common operations:
 
 # Query and evaluation
 ./run.sh query "What is XSS?"        # Single retrieval-grounded question
-./run.sh eval CyberMetric-80-v1.jsonl  # Batch evaluation
+./run.sh eval CM-80                   # Batch evaluation (CyberMetric-80)
+./run.sh eval CM-500                  # Batch evaluation (CyberMetric-500)
+./run.sh eval SecQA                   # Batch evaluation (SecQA dataset)
+./run.sh eval CTF-MC                  # Batch evaluation (CTFKnow multiple choice)
+./run.sh eval CTF-SA                  # Batch evaluation (CTFKnow short answer)
+./run.sh eval eval_datasets/test.jsonl  # Direct path also works
 
 # Evaluation analysis
 ./run.sh analyze                       # Quick summary of latest results
@@ -173,6 +188,23 @@ nano .env
 # 3. Check configuration status
 python -m cyber_rag.cli.check_config
 ```
+
+### Evaluation Datasets
+
+All evaluation datasets are organized in the `eval_datasets/` folder:
+
+| Alias | Dataset | Description |
+|-------|---------|-------------|
+| `CM-01-v1` | CyberMetric-01-v1.jsonl | 1 question (test) |
+| `CM-01-v2` | CyberMetric-01-v2.jsonl | 1 question (variant) |
+| `CM-80` | CyberMetric-80-v1.jsonl | 80 questions |
+| `CM-500` | CyberMetric-500-v1.jsonl | 500 questions |
+| `SecQA` | SecQA.jsonl | Security QA dataset |
+| `CTF-MC` | ctfknow_multiple_choice.jsonl | CTF multiple choice |
+| `CTF-SA` | ctfknow_short_answer.jsonl | CTF short answer |
+| `test` | test.jsonl | Test dataset |
+
+Use `./run.sh eval <alias>` for quick evaluation, or provide full path like `./run.sh eval eval_datasets/CyberMetric-80-v1.jsonl`.
 
 ### One-Key Provider Switching
 
@@ -250,19 +282,19 @@ Additional runtime defaults are configured in `cyber_rag/config.py`, including:
   ```
 - Run batch evaluation (baseline vs RAG) on a dataset and write CSV output:
   ```bash
-  python -m cyber_rag.cli.run_eval path/to/eval.jsonl --index-path artifacts/indexes/default
+  python -m cyber_rag.cli.run_eval eval_datasets/CyberMetric-80-v1.jsonl --index-path artifacts/indexes/default
   ```
-  
+
   By default, evaluation files are automatically named with timestamps in the format `artifacts/evals/eval_YYYYMMDD_HHMMSS.csv`. To specify a custom output path:
   ```bash
-  python -m cyber_rag.cli.run_eval path/to/eval.jsonl --output artifacts/evals/my_experiment.csv
+  python -m cyber_rag.cli.run_eval eval_datasets/CyberMetric-80-v1.jsonl --output artifacts/evals/my_experiment.csv
   ```
   For short-answer datasets, an LLM judge scores each answer in **[0, 1]** as
   `baseline_judge_accuracy` and `rag_judge_accuracy`. Optional columns
   `baseline_correct` / `rag_correct` are True when the score is at least
   `--judge-threshold` (default `0.5`). Example with a separate judge model:
   ```bash
-  python -m cyber_rag.cli.run_eval path/to/eval.jsonl \
+  python -m cyber_rag.cli.run_eval eval_datasets/ctfknow_short_answer.jsonl \
     --model deepseek-v3 \
     --judge-model gpt-4o-mini \
     --judge-threshold 0.5
