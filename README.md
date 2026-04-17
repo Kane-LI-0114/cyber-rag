@@ -408,44 +408,132 @@ question,answer
 
 The system includes a comprehensive evaluation analysis script (`scripts/analyze_eval.py`) for deeper insights into baseline vs RAG performance:
 
-**Features**:
-- **Accuracy Metrics**: Overall and per-question-type accuracy calculation
-- **Result Categorization**: Classifies questions into four categories:
-  - Both Correct: Baseline and RAG both answered correctly
-  - RAG Improved: Baseline failed, RAG succeeded
-  - RAG Regressed: Baseline succeeded, RAG failed
-  - Both Wrong: Neither method succeeded
-- **Detailed Reports**: Text reports with sample cases and root cause analysis
-- **JSON Export**: Machine-readable summary for further processing
-- **Error Case Export**: Export specific case types to CSV for targeted analysis
+### Analysis Dimensions
 
-**Usage**:
+The analysis module provides **9 major analysis dimensions**:
+
+#### 1. Basic Accuracy Metrics
+- Overall and per-question-type (MCQ/Short Answer) accuracy
+- Baseline vs RAG comparison
+- Skipped/error tracking
+
+#### 2. Result Categorization
+Classifies questions into four categories:
+- **Both Correct**: Baseline and RAG both answered correctly
+- **RAG Improved**: Baseline failed, RAG succeeded
+- **RAG Regressed**: Baseline succeeded, RAG failed
+- **Both Wrong**: Neither method succeeded
+
+#### 3. Retrieval Quality Analysis
+- Chunk count distribution (mean, median, std, quartiles)
+- Zero-chunk case detection
+- Chunk count correlation with accuracy
+- Source diversity analysis (if sources are tracked)
+
+#### 4. Question Difficulty Profiling
+- **Easy**: Both Correct rate (questions both systems can answer)
+- **Medium**: RAG Improved only (questions requiring retrieval)
+- **Hard**: Both Wrong rate (questions neither system can solve)
+- **Retrieval Trap**: RAG Regressed (questions where retrieval hurts)
+- Overall difficulty score (0-100 normalized)
+
+#### 5. Answer Quality Deep Analysis
+**MCQ Analysis**:
+- Option distribution (A/B/C/D) for baseline and RAG
+- Reference answer distribution
+- Model bias detection (>10% deviation from expected 25%)
+- Answer change patterns
+
+**Short Answer Analysis**:
+- Answer length statistics (mean, median, std)
+- Judge score distribution (0-1)
+- Boundary sample detection (scores near 0.5 threshold)
+
+#### 6. Error Pattern Mining
+- RAG Regressed root cause analysis
+  - Chunk count correlation
+  - High-chunk-but-still-wrong detection (possible noise/conflict)
+- Both Wrong analysis (corpus coverage vs reasoning issues)
+- Answer change effectiveness (net effect of RAG changes)
+
+#### 7. Statistical Significance Testing
+- **McNemar's Test**: Chi-square with continuity correction
+- P-value calculation (α = 0.05, 0.01)
+- **Effect Size**: Cohen's h interpretation
+- **95% Confidence Interval**: For proportion difference
+- Significance interpretation
+
+#### 8. Cross-Dimensional Analysis
+- Question Type × Result Classification matrix
+- Chunk Count × Accuracy correlation
+- Answer Length × Judge Score correlation
+- Judge score distribution buckets (Very Low → Excellent)
+
+#### 9. Sample Case Export
+- Export specific error categories to CSV for targeted analysis
+
+### Usage
+
 ```bash
+# Quick summary (recommended first step)
+./run.sh analyze -q
+
+# Full comprehensive report (recommended)
+./run.sh analyze -v
+
 # Quick summary of latest results
 ./run.sh analyze
-
-# Detailed text report
-./run.sh analyze -v
 
 # Save text report to file
 ./run.sh analyze --report report.txt
 
-# Save JSON summary
+# Save JSON summary (for programmatic analysis)
 ./run.sh analyze --json summary.json
 
-# Export RAG-regressed cases to CSV
+# Export RAG-regressed cases for targeted analysis
 ./run.sh analyze -e rag_regressed --export-path regressed_cases.csv
+
+# Export all both-wrong cases for corpus improvement
+./run.sh analyze -e both_wrong --export-path hard_cases.csv
 ```
 
-**API**:
+### Python API
+
 ```python
 from scripts.analyze_eval import (
+    # Data loading
     load_evaluation_data,
+    
+    # Core analysis functions
     calculate_accuracy_metrics,
     categorize_results,
-    generate_text_report,
+    analyze_retrieval_quality,
+    analyze_question_difficulty,
+    analyze_answer_quality,
+    mine_error_patterns,
+    calculate_statistical_significance,
+    analyze_cross_dimensions,
+    
+    # Report generation
+    generate_comprehensive_report,
     generate_json_summary,
     export_error_cases,
+    
+    # Utility
+    get_error_cases,
+)
+
+# Load and analyze
+df = load_evaluation_data("artifacts/evals/eval_20260417.csv")
+metrics = calculate_accuracy_metrics(df)
+stats = calculate_statistical_significance(df)
+
+# Generate full report
+report = generate_comprehensive_report(
+    df, metrics, categories,
+    retrieval_quality, difficulty,
+    answer_quality, error_patterns,
+    stats, cross_analysis
 )
 ```
 
