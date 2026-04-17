@@ -121,6 +121,7 @@ def _build_llm(config: GenerationConfig | None = None):
             base_url=generation_config.base_url.rstrip("/"),
             api_key=generation_config.api_key,
             temperature=generation_config.temperature,
+            extra_body={"max_tokens": generation_config.max_tokens or 256},
             max_retries=2,
         )
     else:

@@ -92,6 +92,7 @@ class GenerationConfig:
     api_key: str | None = None
     base_url: str | None = None
     api_version: str | None = None
+    max_tokens: int | None = None
 
     def __post_init__(self) -> None:
         # Handle None provider by falling back to default
@@ -111,6 +112,8 @@ class GenerationConfig:
             self.model_name = self.model_name or _read_env("CYBER_RAG_HUGGINGFACE_MODEL_NAME")
             self.api_key = self.api_key or _read_env("CYBER_RAG_HUGGINGFACE_API_KEY")
             self.base_url = self.base_url or _read_env("CYBER_RAG_HUGGINGFACE_BASE_URL") or "https://router.huggingface.co/v1"
+            if self.max_tokens is None:
+                self.max_tokens = int(_read_env("CYBER_RAG_HUGGINGFACE_MAX_TOKENS") or 256)
         else:
             raise ValueError(f"Unsupported provider: {self.provider}")
 
@@ -147,6 +150,7 @@ class JudgeConfig:
     api_key: str | None = None
     base_url: str | None = None
     api_version: str | None = None
+    max_tokens: int | None = None
 
     def __post_init__(self) -> None:
         # Handle None provider by falling back to default (via get_judge_provider)
@@ -166,6 +170,8 @@ class JudgeConfig:
             self.model_name = self.model_name or _read_env("CYBER_RAG_JUDGE_HUGGINGFACE_MODEL_NAME")
             self.api_key = self.api_key or _read_env("CYBER_RAG_JUDGE_HUGGINGFACE_API_KEY")
             self.base_url = self.base_url or _read_env("CYBER_RAG_JUDGE_HUGGINGFACE_BASE_URL") or "https://router.huggingface.co/v1"
+            if self.max_tokens is None:
+                self.max_tokens = int(_read_env("CYBER_RAG_JUDGE_HUGGINGFACE_MAX_TOKENS") or _read_env("CYBER_RAG_HUGGINGFACE_MAX_TOKENS") or 256)
         else:
             raise ValueError(f"Unsupported provider: {self.provider}")
 
@@ -193,6 +199,7 @@ class JudgeConfig:
             api_key=self.api_key,
             base_url=self.base_url,
             api_version=self.api_version,
+            max_tokens=self.max_tokens,
         )
 
 

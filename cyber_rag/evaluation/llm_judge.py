@@ -82,6 +82,17 @@ def _build_judge_llm(config: GenerationConfig | None = None):
             base_url=judge_config.base_url.rstrip("/"),
             api_key=judge_config.api_key,
             temperature=0.0,
+            max_tokens=256,
+            max_retries=2,
+        )
+
+    if judge_config.provider == "huggingface":
+        return ChatOpenAI(
+            model=judge_config.model_name or "gpt-4o-mini",
+            base_url=judge_config.base_url.rstrip("/"),
+            api_key=judge_config.api_key,
+            temperature=0.0,
+            extra_body={"max_tokens": judge_config.max_tokens or 256},
             max_retries=2,
         )
 
