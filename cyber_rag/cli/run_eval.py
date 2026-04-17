@@ -88,7 +88,23 @@ def main() -> None:
         judge_threshold=args.judge_threshold,
         limit=args.limit,
     )
+
+    # Build output path with model name if using default
     output_path = Path(args.output)
+    if args.output == str(DEFAULT_EVAL_PATH):
+        def _sanitize(name: str) -> str:
+            return name.replace("/", "-").replace(":", "-")
+        model_tag = _sanitize(generation_config.model_name) if generation_config.model_name else ""
+        judge_tag = _sanitize(judge_generation_config.model_name) if judge_generation_config.model_name else ""
+        parts = [model_tag]
+        if judge_tag and judge_tag != model_tag:
+            parts.append(f"judge-{judge_tag}")
+        tag = "_".join(p for p in parts if p)
+        if tag:
+            output_path = output_path.with_name(
+                output_path.stem + f"_{tag}" + output_path.suffix
+            )
+
     output_path.parent.mkdir(parents=True, exist_ok=True)
     frame.to_csv(output_path, index=False)
     print(f"Saved {len(frame)} evaluation rows to {output_path}")

@@ -186,7 +186,18 @@ run_eval() {
         exit 1
     fi
 
-    local output="artifacts/evals/$(date +%Y%m%d_%H%M%S).csv"
+    # Build output filename with model name and optional judge model name
+    local model_tag=""
+    local judge_tag=""
+    if [ -n "$model" ]; then
+        model_tag="_${model//\//-}"
+        model_tag="${model_tag//:/-}"
+    fi
+    if [ -n "$judge_model" ]; then
+        judge_tag="_judge-${judge_model//\//-}"
+        judge_tag="${judge_tag//:/-}"
+    fi
+    local output="artifacts/evals/$(date +%Y%m%d_%H%M%S)${model_tag}${judge_tag}.csv"
 
     # 解析别名
     case "$dataset" in
