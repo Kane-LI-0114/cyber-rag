@@ -94,6 +94,10 @@ class GenerationConfig:
     api_version: str | None = None
 
     def __post_init__(self) -> None:
+        # Handle None provider by falling back to default
+        if self.provider is None:
+            self.provider = "azure"
+
         if self.provider == "azure":
             self.model_name = self.model_name or _read_env("CYBER_RAG_AZURE_MODEL_NAME")
             self.api_key = self.api_key or _read_env("CYBER_RAG_AZURE_API_KEY")
@@ -145,6 +149,10 @@ class JudgeConfig:
     api_version: str | None = None
 
     def __post_init__(self) -> None:
+        # Handle None provider by falling back to default (via get_judge_provider)
+        if self.provider is None:
+            self.provider = get_judge_provider()
+
         if self.provider == "azure":
             self.model_name = self.model_name or _read_env("CYBER_RAG_JUDGE_AZURE_MODEL_NAME")
             self.api_key = self.api_key or _read_env("CYBER_RAG_JUDGE_AZURE_API_KEY")
