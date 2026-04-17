@@ -306,7 +306,8 @@ case "$1" in
         run_query "$*"
         ;;
     eval)
-        run_eval "$2" "$3"
+        shift  # 移除 eval，保留其余参数
+        run_eval "$@"
         ;;
     analyze)
         shift  # 移除 analyze，保留其余参数
