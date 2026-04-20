@@ -41,7 +41,7 @@ show_help() {
     echo "  eval <别名/路径>    批量评估 (baseline vs RAG)"
     echo "                      [--provider <提供商>] [--model <回答模型>]"
     echo "                      [--judge-provider <Judge提供商>] [--judge-model <Judge模型>]"
-    echo "                      别名: CM-01-v1, CM-01-v2, CM-80, CM-500, SecQA, CTF-MC, CTF-SA, test"
+    echo "                      别名: CM-01-v1, CM-01-v2, CM-80, CM-500, SecQA, CTF-MC, CTF-SA, demo-md5, test"
     echo ""
     echo -e "${GREEN}[评估分析]${NC}"
     echo "  analyze [CSV路径]    分析评估结果 (默认: 最新带时间戳的CSV文件)"
@@ -177,6 +177,7 @@ run_eval() {
         echo "  SecQA                  -> SecQA 安全问答数据集"
         echo "  CTF-MC                 -> CTFKnow 多选题数据集"
         echo "  CTF-SA                 -> CTFKnow 简答题数据集"
+        echo "  demo-md5               -> MD5暴力破解演示 (1条)"
         echo "  test                   -> 测试数据集"
         echo ""
         echo "可选参数:"
@@ -228,6 +229,9 @@ run_eval() {
             ;;
         CTF-SA|ctf-sa|CTFSA|ctfsa)
             dataset="eval_datasets/ctfknow_short_answer.jsonl"
+            ;;
+        demo-md5|DEMO-MD5)
+            dataset="eval_datasets/demo_md5_bruteforce.jsonl"
             ;;
         test|TEST)
             dataset="eval_datasets/test.jsonl"
