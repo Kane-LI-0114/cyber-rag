@@ -63,6 +63,8 @@ show_help() {
     echo "  lint               代码风格检查"
     echo ""
     echo -e "${GREEN}[其他]${NC}"
+    echo "  web                 启动 Web UI (默认端口 8501)"
+    echo "  web <端口>          启动 Web UI (指定端口)"
     echo "  help               显示本帮助信息"
     echo ""
     echo "示例:"
@@ -309,6 +311,14 @@ run_lint() {
     echo -e "${GREEN}>>> 检查完成${NC}"
 }
 
+# 启动 Web UI
+start_web() {
+    local port=${1:-8501}
+    echo -e "${YELLOW}>>> 启动 CyberRAG Web UI (端口: ${port})...${NC}"
+    conda activate cyber-rag
+    python -m uvicorn cyber_rag.web.server:app --host 0.0.0.0 --port "$port"
+}
+
 # 主逻辑
 case "$1" in
     setup)
@@ -343,6 +353,9 @@ case "$1" in
         ;;
     lint)
         run_lint
+        ;;
+    web)
+        start_web "$2"
         ;;
     help|--help|-h|"")
         show_help

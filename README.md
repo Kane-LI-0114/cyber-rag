@@ -45,7 +45,12 @@ cyber_rag/
 │   └── local_llm.py      # Local HuggingFace LLM support (Mistral-7B)
 └── evaluation/           # Dataset loading and batch evaluation
     ├── datasets.py       # JSONL/CSV evaluation data loading
-    └── runner.py         # Baseline vs RAG comparison runner
+    ├── runner.py         # Baseline vs RAG comparison runner
+    └── llm_judge.py      # LLM-based answer judging for short answers
+├── web/                  # Web UI (FastAPI + static frontend)
+    ├── server.py         # FastAPI server with SSE streaming
+    └── static/
+        └── index.html    # Single-page frontend (Anthropic-style)
 
 scripts/
 ├── build_index.py        # Thin compatibility wrapper for index building
@@ -183,6 +188,10 @@ A convenient `run.sh` script is provided for common operations:
 ./run.sh test-chunking      # Run chunking tests only
 ./run.sh lint               # Code style check
 
+# Web UI
+./run.sh web                # Start web UI on port 8501
+./run.sh web 8080           # Start web UI on custom port
+
 # Help
 ./run.sh help               # Show all available commands
 ```
@@ -299,6 +308,34 @@ Additional runtime defaults are configured in `cyber_rag/config.py`, including:
 - retrieval defaults (`k`, `search_type`)
 - generation defaults (provider, model name, temperature)
 - DotsOCR settings (timeout, max_workers, page_scale)
+
+## Web UI
+
+A browser-based interface for interactive querying and evaluation, powered by FastAPI with streaming LLM responses.
+
+### Features
+
+- **Query mode**: Ask cybersecurity questions with streaming RAG responses and source citations
+- **Evaluate mode**: Compare baseline vs RAG answers side-by-side with streaming output
+- **Markdown rendering**: Full GFM support including tables, code blocks, and LaTeX math (KaTeX)
+- **Anthropic-inspired design**: Minimal, warm-toned interface with smooth transitions
+
+### Starting the server
+
+```bash
+./run.sh web          # Default port 8501
+./run.sh web 8080     # Custom port
+```
+
+Then open `http://localhost:8501` in your browser.
+
+### Architecture
+
+The web UI consists of:
+- `cyber_rag/web/server.py` — FastAPI backend with SSE streaming endpoints
+- `cyber_rag/web/static/index.html` — Single-page frontend (no build step required)
+
+The terminal CLI commands (`./run.sh query`, `./run.sh eval`) remain unchanged and fully functional.
 
 ## Development commands
 
