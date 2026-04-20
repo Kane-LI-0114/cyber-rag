@@ -220,13 +220,16 @@ body {
 }
 
 .msg-avatar {
-  width: 32px; height: 32px;
-  border-radius: 8px;
-  background: var(--accent-bg);
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
   display: flex; align-items: center; justify-content: center;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   flex-shrink: 0;
   margin-top: 2px;
+  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.25);
+  color: white;
+  font-weight: 600;
 }
 
 .msg-body {
@@ -243,47 +246,109 @@ body {
   letter-spacing: 0.04em;
 }
 
-.msg-content {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px 20px;
-  font-size: 0.9rem;
-  line-height: 1.7;
-}
+
 
 /* Markdown rendering inside messages */
 .msg-content h1, .msg-content h2, .msg-content h3 {
   font-weight: 600;
-  margin: 16px 0 8px;
+  margin: 20px 0 10px;
   color: var(--text);
+  letter-spacing: -0.01em;
 }
-.msg-content h1 { font-size: 1.2rem; }
-.msg-content h2 { font-size: 1.05rem; }
-.msg-content h3 { font-size: 0.95rem; }
-.msg-content p { margin: 8px 0; }
-.msg-content ul, .msg-content ol { margin: 8px 0; padding-left: 20px; }
-.msg-content li { margin: 4px 0; }
+.msg-content h1 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+.msg-content h2 { font-size: 1.1rem; }
+.msg-content h3 { font-size: 1rem; color: var(--text-2); }
+.msg-content p { margin: 10px 0; }
+.msg-content ul, .msg-content ol { margin: 10px 0; padding-left: 24px; }
+.msg-content li { margin: 6px 0; }
+.msg-content li::marker { color: var(--accent); }
+
+/* Inline code */
 .msg-content code {
   font-family: var(--font-mono);
-  font-size: 0.84em;
-  background: var(--bg-deep);
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-.msg-content pre {
-  background: #1C1917;
-  color: #E7E5E4;
-  border-radius: var(--radius-sm);
-  padding: 16px;
-  overflow-x: auto;
-  margin: 12px 0;
-}
-.msg-content pre code {
-  background: none;
-  padding: 0;
-  color: inherit;
   font-size: 0.82em;
+  background: linear-gradient(135deg, #F5F5F4 0%, #FAFAF9 100%);
+  color: var(--accent-2);
+  padding: 2px 6px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  font-weight: 500;
+}
+
+/* Code block container */
+.msg-content pre {
+  background: linear-gradient(145deg, #1C1917 0%, #292524 100%);
+  border-radius: 12px;
+  padding: 0;
+  overflow: hidden;
+  margin: 16px 0;
+  border: 1px solid #44403C;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Code block header */
+.msg-content pre::before {
+  content: attr(data-language);
+  display: block;
+  background: linear-gradient(90deg, #292524 0%, #44403C 100%);
+  color: #A8A29E;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 8px 16px;
+  border-bottom: 1px solid #44403C;
+}
+
+/* Code content */
+.msg-content pre code {
+  display: block;
+  background: none;
+  padding: 16px 20px;
+  color: #E7E5E4;
+  font-size: 0.8rem;
+  line-height: 1.65;
+  overflow-x: auto;
+  font-weight: 400;
+}
+
+/* Syntax highlighting colors */
+.msg-content pre code .keyword { color: #F472B6; font-weight: 500; }
+.msg-content pre code .string { color: #A3E635; }
+.msg-content pre code .number { color: #60A5FA; }
+.msg-content pre code .comment { color: #78716C; font-style: italic; }
+.msg-content pre code .function { color: #FBBF24; }
+.msg-content pre code .operator { color: #F87171; }
+
+/* Copy button */
+.code-block-wrapper {
+  position: relative;
+}
+.code-copy-btn {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  background: rgba(68, 64, 60, 0.8);
+  border: none;
+  color: #A8A29E;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(4px);
+}
+.code-block-wrapper:hover .code-copy-btn {
+  opacity: 1;
+}
+.code-copy-btn:hover {
+  background: #57534E;
+  color: #FAFAF9;
+}
+.code-copy-btn.copied {
+  background: var(--green);
+  color: white;
 }
 .msg-content blockquote {
   border-left: 3px solid var(--accent);
@@ -914,8 +979,108 @@ body {
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* Enhanced typing cursor */
+.typing-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1.2em;
+  background: linear-gradient(180deg, var(--accent) 0%, var(--accent-2) 100%);
+  border-radius: 1px;
+  margin-left: 3px;
+  vertical-align: text-bottom;
+  animation: blink 1s steps(1) infinite;
+  box-shadow: 0 0 4px rgba(217, 119, 6, 0.5);
+}
+
+/* Message content enhancements */
+.msg-content {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 22px;
+  font-size: 0.92rem;
+  line-height: 1.75;
+  box-shadow: var(--shadow);
+  transition: box-shadow 0.2s ease;
+}
+
+.msg-content:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+/* Strong and emphasis */
+.msg-content strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.msg-content em {
+  color: var(--accent-2);
+  font-style: italic;
+}
+
+/* Blockquotes */
+.msg-content blockquote {
+  border-left: 3px solid var(--accent);
+  background: var(--accent-bg);
+  padding: 12px 16px;
+  margin: 12px 0;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-style: italic;
+  color: var(--text-2);
+}
+
+/* Horizontal rule */
+.msg-content hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, var(--border) 50%, transparent 100%);
+  margin: 20px 0;
+}
+
+/* Tables */
+.msg-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  font-size: 0.85rem;
+}
+
+.msg-content th,
+.msg-content td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.msg-content th {
+  background: var(--bg-deep);
+  font-weight: 600;
+  color: var(--text);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.msg-content tr:hover {
+  background: var(--bg-deep);
+}
+
+/* Links */
+.msg-content a {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px dotted var(--accent);
+  transition: all 0.2s ease;
+}
+
+.msg-content a:hover {
+  color: var(--accent-2);
+  border-bottom-style: solid;
 }
 
 /* ─── Responsive ─── */
@@ -1062,9 +1227,55 @@ function switchView(name) {
 function renderMarkdown(text) {
   if (!text) return '';
   try {
-    return marked.parse(text, { breaks: true, gfm: true });
+    const html = marked.parse(text, { breaks: true, gfm: true });
+    return enhanceCodeBlocks(html);
   } catch {
     return text.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+  }
+}
+
+// Enhance code blocks with language labels and copy buttons
+function enhanceCodeBlocks(html) {
+  const temp = document.createElement('div');
+  temp.innerHTML = html;
+
+  temp.querySelectorAll('pre code').forEach(codeBlock => {
+    const pre = codeBlock.parentElement;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'code-block-wrapper';
+
+    // Extract language from class
+    const langClass = codeBlock.className.match(/language-(\w+)/);
+    const language = langClass ? langClass[1] : 'code';
+    pre.setAttribute('data-language', language);
+
+    // Create copy button
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'code-copy-btn';
+    copyBtn.textContent = 'Copy';
+    copyBtn.onclick = () => copyCode(codeBlock.textContent, copyBtn);
+
+    // Wrap pre in wrapper
+    pre.parentNode.insertBefore(wrapper, pre);
+    wrapper.appendChild(pre);
+    wrapper.appendChild(copyBtn);
+  });
+
+  return temp.innerHTML;
+}
+
+async function copyCode(text, btn) {
+  try {
+    await navigator.clipboard.writeText(text);
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = 'Copy';
+      btn.classList.remove('copied');
+    }, 2000);
+  } catch (err) {
+    btn.textContent = 'Failed';
+    setTimeout(() => btn.textContent = 'Copy', 2000);
   }
 }
 
