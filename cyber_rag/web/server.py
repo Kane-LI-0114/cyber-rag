@@ -161,6 +161,26 @@ async def index():
     return (Path(__file__).parent / "static" / "index.html").read_text(encoding="utf-8")
 
 
+@app.get("/api/models")
+async def list_models():
+    """List available LLM models from configured providers."""
+    models = []
+    for env_prefix, provider_label in [
+        ("CYBER_RAG_AZURE", "Azure"),
+        ("CYBER_RAG_ONEAPI", "OneAPI"),
+        ("CYBER_RAG_HUGGINGFACE", "HuggingFace"),
+    ]:
+        api_key = os.getenv(f"{env_prefix}_API_KEY", "")
+        model_name = os.getenv(f"{env_prefix}_MODEL_NAME", "")
+        if api_key and model_name:
+            models.append({
+                "provider": provider_label.lower(),
+                "model": model_name,
+                "label": f"{model_name} ({provider_label})",
+            })
+    return JSONResponse(models)
+
+
 @app.post("/api/datasets/upload")
 async def upload_dataset(file: UploadFile = File(...)):
     """Upload an evaluation dataset file (.jsonl or .csv)."""

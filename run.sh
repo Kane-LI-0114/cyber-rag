@@ -314,6 +314,21 @@ run_lint() {
 # 启动 Web UI
 start_web() {
     local port=${1:-8501}
+    # 先关闭占用端口的旧进程
+    local old_pid
+    old_pid=$(lsof -ti :"$port" 2>/dev/null || true)
+    if [ -n "$old_pid" ]; then
+        echo -e "${YELLOW}>>> 关闭端口 ${port} 上的旧进程 (PID: ${old_pid})...${NC}"
+        kill $old_pid 2>/dev/null || true
+        sleep 1
+        # 确认进程已退出
+        if lsof -ti :"$port" &>/dev/null; then
+            echo -e "${YELLOW}>>> 强制关闭...${NC}"
+            kill -9 $old_pid 2>/dev/null || true
+            sleep 1
+        fi
+        echo -e "${GREEN}>>> 旧进程已关闭${NC}"
+    fi
     echo -e "${YELLOW}>>> 启动 CyberRAG Web UI (端口: ${port})...${NC}"
     conda activate cyber-rag
     python -m uvicorn cyber_rag.web.server:app --host 0.0.0.0 --port "$port"

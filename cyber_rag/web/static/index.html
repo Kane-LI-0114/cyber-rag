@@ -30,6 +30,8 @@
   --red-bg:    #FEF2F2;
   --blue:      #2563EB;
   --blue-bg:   #EFF6FF;
+  --purple:    #7C3AED;
+  --purple-bg: #F5F3FF;
   --radius:    10px;
   --radius-sm: 6px;
   --shadow:    0 1px 3px rgba(0,0,0,.04), 0 1px 2px rgba(0,0,0,.06);
@@ -37,6 +39,7 @@
   --font:      'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
   --transition: 0.2s cubic-bezier(.4,0,.2,1);
+  --control-h: 42px;
   color-scheme: light;
 }
 
@@ -523,14 +526,14 @@ body {
   max-width: 900px;
   margin: 0 auto;
   display: flex;
-  gap: 12px;
-  align-items: stretch;
+  gap: 8px;
+  align-items: center;
 }
 
 .input-row {
   display: flex;
-  gap: 10px;
-  align-items: flex-end;
+  gap: 8px;
+  align-items: center;
 }
 
 .input-textarea {
@@ -538,7 +541,7 @@ body {
   resize: none;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 12px 16px;
+  padding: 10px 16px;
   font-family: var(--font);
   font-size: 0.88rem;
   line-height: 1.5;
@@ -546,7 +549,7 @@ body {
   background: var(--bg);
   outline: none;
   transition: border-color var(--transition), box-shadow var(--transition);
-  min-height: 46px;
+  min-height: var(--control-h);
   max-height: 160px;
 }
 
@@ -557,21 +560,24 @@ body {
 
 .input-textarea::placeholder { color: var(--text-3); }
 
+/* ─── Buttons ─── */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 10px 18px;
+  height: var(--control-h);
+  padding: 0 16px;
   border-radius: var(--radius-sm);
   font-family: var(--font);
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
   border: 1px solid transparent;
   transition: all var(--transition);
   user-select: none;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .btn-primary {
@@ -592,25 +598,37 @@ body {
 .btn-secondary:hover { border-color: var(--border-hover); color: var(--text); }
 
 .btn-sm {
-  padding: 7px 12px;
+  height: 34px;
+  padding: 0 12px;
   font-size: 0.78rem;
 }
 
-/* Eval dropdowns */
+/* ─── Controls (unified height) ─── */
+.control {
+  height: var(--control-h);
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+.control-grow {
+  height: var(--control-h);
+  min-width: 0;
+  flex: 1 1 0;
+}
+
+/* ─── Dropdown ─── */
 .dropdown {
   position: relative;
-  flex: 1 1 0;
-  min-width: 0;
 }
 
 .dropdown-trigger {
   width: 100%;
-  min-height: 44px;
-  padding: 10px 14px;
+  height: var(--control-h);
+  padding: 0 14px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   font-family: var(--font);
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   color: var(--text);
   background: var(--surface);
   outline: none;
@@ -619,7 +637,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   text-align: left;
 }
 
@@ -644,6 +662,7 @@ body {
   flex-shrink: 0;
   color: var(--text-3);
   transition: transform var(--transition), color var(--transition);
+  font-size: 0.7rem;
 }
 
 .dropdown.open .dropdown-caret {
@@ -679,7 +698,7 @@ body {
 
 .dropdown-option {
   width: 100%;
-  padding: 10px 12px;
+  padding: 9px 12px;
   border: none;
   border-radius: var(--radius-sm);
   background: transparent;
@@ -711,24 +730,39 @@ body {
   background: transparent;
 }
 
-/* File upload zone */
+/* Model tag inside dropdown */
+.model-tag {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.model-tag.azure { background: var(--blue-bg); color: var(--blue); }
+.model-tag.oneapi { background: var(--green-bg); color: var(--green); }
+.model-tag.huggingface { background: var(--purple-bg); color: var(--purple); }
+
+/* ─── File upload zone ─── */
 .file-upload-zone {
-  flex: 1 1 0;
+  height: var(--control-h);
   min-width: 0;
-  min-height: 44px;
-  border: 2px dashed var(--border);
+  border: 1px dashed var(--border);
   border-radius: var(--radius-sm);
   background: var(--surface);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 10px 16px;
+  padding: 0 14px;
   cursor: pointer;
   transition: all var(--transition);
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   color: var(--text-3);
   position: relative;
+  flex: 1 1 0;
 }
 
 .file-upload-zone:hover {
@@ -754,11 +788,99 @@ body {
 }
 
 .file-upload-zone .upload-icon {
-  font-size: 1.1rem;
+  font-size: 0.95rem;
   flex-shrink: 0;
 }
 
 .file-upload-zone .upload-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ─── Model selector (compact) ─── */
+.model-select-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.model-select-btn {
+  height: var(--control-h);
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font);
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-2);
+  background: var(--surface);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+
+.model-select-btn:hover { border-color: var(--border-hover); color: var(--text); }
+
+.model-select-btn .model-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.model-dot.azure { background: var(--blue); }
+.model-dot.oneapi { background: var(--green); }
+.model-dot.huggingface { background: var(--purple); }
+
+.model-select-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  display: none;
+  min-width: 240px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  z-index: 30;
+}
+
+.model-select-wrapper.open .model-select-menu {
+  display: block;
+}
+
+.model-option {
+  width: 100%;
+  padding: 9px 12px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: var(--text-2);
+  transition: all var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.model-option:hover {
+  background: var(--accent-bg);
+  color: var(--text);
+}
+
+.model-option.active {
+  background: var(--accent-bg);
+  color: var(--accent-2);
+  font-weight: 600;
+}
+
+.model-option .model-name {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -803,11 +925,13 @@ body {
   .messages { padding: 0 16px; }
   .input-bar { padding: 12px 16px 16px; }
   .eval-input-wrapper {
-    flex-direction: column;
-    align-items: stretch;
+    flex-wrap: wrap;
   }
-  .dropdown {
+  .file-upload-zone,
+  .dropdown.control-grow,
+  .model-select-wrapper {
     width: 100%;
+    flex-basis: 100%;
   }
   .eval-input-wrapper .btn {
     width: 100%;
@@ -848,7 +972,7 @@ body {
     <div id="view-query" class="view active">
       <div class="query-container" id="queryContainer">
         <div class="query-empty" id="queryEmpty">
-          <div class="query-empty-icon">🔒</div>
+          <div class="query-empty-icon">&#x1F512;</div>
           <h2>Cybersecurity Knowledge Query</h2>
           <p>Ask a cybersecurity question and get a retrieval-augmented answer with source citations.</p>
         </div>
@@ -858,8 +982,15 @@ body {
         <div class="input-wrapper">
           <div class="input-row">
             <textarea class="input-textarea" id="queryInput" placeholder="Ask a cybersecurity question..." rows="1" onkeydown="handleQueryKey(event)"></textarea>
+            <div class="model-select-wrapper" id="queryModelSelect">
+              <button class="model-select-btn" id="queryModelBtn" type="button" onclick="toggleModelSelect('query')">
+                <span class="model-dot" id="queryModelDot"></span>
+                <span id="queryModelLabel">Loading...</span>
+              </button>
+              <div class="model-select-menu" id="queryModelMenu"></div>
+            </div>
             <button class="btn btn-primary" id="queryBtn" onclick="submitQuery()">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
             </button>
           </div>
         </div>
@@ -870,9 +1001,9 @@ body {
     <div id="view-eval" class="view">
       <div class="eval-container" id="evalContainer">
         <div class="eval-empty" id="evalEmpty">
-          <div class="query-empty-icon">📊</div>
+          <div class="query-empty-icon">&#x1F4CA;</div>
           <h2>Baseline vs RAG Evaluation</h2>
-          <p>Select a dataset and question to compare baseline and retrieval-augmented answers side by side.</p>
+          <p>Upload a dataset and select a question to compare baseline and retrieval-augmented answers side by side.</p>
         </div>
         <div class="eval-layout" id="evalContent" style="display:none"></div>
       </div>
@@ -880,18 +1011,25 @@ body {
         <div class="eval-input-wrapper">
           <div class="file-upload-zone" id="fileUploadZone" onclick="document.getElementById('fileInput').click()">
             <input type="file" id="fileInput" accept=".jsonl,.csv" onchange="handleFileSelect(event)">
-            <span class="upload-icon">📎</span>
-            <span class="upload-text" id="uploadText">Drop .jsonl / .csv here or click to browse</span>
+            <span class="upload-icon">&#x1F4CE;</span>
+            <span class="upload-text" id="uploadText">Drop .jsonl / .csv or browse</span>
           </div>
-          <div class="dropdown is-disabled" id="questionDropdown">
+          <div class="dropdown control-grow is-disabled" id="questionDropdown">
             <button class="dropdown-trigger" id="questionTrigger" type="button" onclick="toggleDropdown('question')" disabled>
               <span class="dropdown-label placeholder" id="questionLabel">Select question...</span>
-              <span class="dropdown-caret">▾</span>
+              <span class="dropdown-caret">&#x25BE;</span>
             </button>
             <div class="dropdown-menu" id="questionMenu"></div>
           </div>
+          <div class="model-select-wrapper" id="evalModelSelect">
+            <button class="model-select-btn" id="evalModelBtn" type="button" onclick="toggleModelSelect('eval')">
+              <span class="model-dot" id="evalModelDot"></span>
+              <span id="evalModelLabel">Loading...</span>
+            </button>
+            <div class="model-select-menu" id="evalModelMenu"></div>
+          </div>
           <button class="btn btn-primary" id="evalBtn" onclick="submitEval()" disabled>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
             Run
           </button>
         </div>
@@ -908,6 +1046,8 @@ let currentQuestion = null;
 let evalQuestions = [];
 let selectedQuestionIndex = '';
 let uploadedFilename = '';
+let availableModels = [];
+let selectedModel = null; // { provider, model, label }
 
 // ─── View switching ───
 function switchView(name) {
@@ -982,6 +1122,76 @@ function handleQueryKey(e) {
   }
 }
 
+// ─── Model selector ───
+async function loadModels() {
+  try {
+    const resp = await fetch('/api/models');
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    availableModels = await resp.json();
+    if (!Array.isArray(availableModels) || availableModels.length === 0) {
+      setModelLabel('query', 'No models', '');
+      setModelLabel('eval', 'No models', '');
+      return;
+    }
+    // Default to first model
+    if (!selectedModel) {
+      selectedModel = availableModels[0];
+    }
+    renderModelMenu('query');
+    renderModelMenu('eval');
+    updateModelLabels();
+    console.log(`Loaded ${availableModels.length} models`);
+  } catch (e) {
+    console.error('loadModels error:', e);
+    setModelLabel('query', 'Error', '');
+    setModelLabel('eval', 'Error', '');
+  }
+}
+
+function renderModelMenu(context) {
+  const menu = document.getElementById(`${context}ModelMenu`);
+  menu.innerHTML = '';
+  availableModels.forEach(m => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'model-option' + (selectedModel && selectedModel.model === m.model && selectedModel.provider === m.provider ? ' active' : '');
+    btn.innerHTML = `<span class="model-dot ${m.provider}"></span><span class="model-name">${escapeHtml(m.model)}</span><span class="model-tag ${m.provider}">${m.provider}</span>`;
+    btn.addEventListener('click', () => {
+      selectedModel = m;
+      renderModelMenu('query');
+      renderModelMenu('eval');
+      updateModelLabels();
+      closeAllModelSelects();
+    });
+    menu.appendChild(btn);
+  });
+}
+
+function updateModelLabels() {
+  if (!selectedModel) return;
+  ['query', 'eval'].forEach(ctx => {
+    setModelLabel(ctx, selectedModel.model, selectedModel.provider);
+  });
+}
+
+function setModelLabel(context, text, provider) {
+  document.getElementById(`${context}ModelLabel`).textContent = text;
+  const dot = document.getElementById(`${context}ModelDot`);
+  dot.className = 'model-dot';
+  if (provider) dot.classList.add(provider);
+}
+
+function toggleModelSelect(context) {
+  const wrapper = document.getElementById(`${context}ModelSelect`);
+  const isOpen = wrapper.classList.contains('open');
+  closeAllModelSelects();
+  if (!isOpen) wrapper.classList.add('open');
+}
+
+function closeAllModelSelects() {
+  document.querySelectorAll('.model-select-wrapper').forEach(w => w.classList.remove('open'));
+}
+
 // ─── Query mode ───
 async function submitQuery() {
   if (queryStreaming) return;
@@ -1009,7 +1219,7 @@ async function submitQuery() {
   const msgId = 'msg-' + Date.now();
   msgs.insertAdjacentHTML('beforeend', `
     <div class="msg msg-assistant" id="${msgId}">
-      <div class="msg-avatar">🔍</div>
+      <div class="msg-avatar">&#x1F50D;</div>
       <div class="msg-body">
         <div class="msg-label">RAG Answer</div>
         <div class="msg-content" id="${msgId}-content">
@@ -1027,7 +1237,9 @@ async function submitQuery() {
   const sourcesEl = document.getElementById(`${msgId}-sources`);
 
   try {
-    const url = `/api/query/stream?question=${encodeURIComponent(question)}`;
+    let url = `/api/query/stream?question=${encodeURIComponent(question)}`;
+    if (selectedModel) url += `&model=${encodeURIComponent(selectedModel.model)}`;
+
     await consumeSSE(url, {
       sources(sources) {
         renderSources(sourcesEl, sources);
@@ -1063,14 +1275,14 @@ function renderSources(container, sources) {
   const id = container.id;
   container.innerHTML = `
     <div class="sources-header" onclick="toggleSources('${id}-list')">
-      <span class="sources-toggle" id="${id}-toggle">▸</span>
+      <span class="sources-toggle" id="${id}-toggle">&#x25B8;</span>
       ${sources.length} Source${sources.length > 1 ? 's' : ''}
     </div>
     <div id="${id}-list" style="display:none">
       ${sources.map(s => `
         <div class="source-card">
           <div class="source-title">${escapeHtml(s.title || 'Unknown')}</div>
-          <div class="source-meta">Page ${s.page ?? '—'} · ${escapeHtml(s.chunk_id)}</div>
+          <div class="source-meta">Page ${s.page ?? '—'} &middot; ${escapeHtml(s.chunk_id)}</div>
           <div class="source-excerpt">${escapeHtml(s.excerpt || '')}</div>
         </div>
       `).join('')}
@@ -1189,7 +1401,7 @@ function setDropdownMessage(name, text, disabled = true) {
 }
 
 function formatQuestionOption(q, i) {
-  return `#${i + 1} — ${q.question.slice(0, 80)}${q.question.length > 80 ? '…' : ''}`;
+  return `#${i + 1} \u2014 ${q.question.slice(0, 80)}${q.question.length > 80 ? '\u2026' : ''}`;
 }
 
 function buildQuestionOptions() {
@@ -1266,14 +1478,14 @@ async function uploadDatasetFile(file) {
 
     uploadedFilename = result.filename;
     zone.classList.add('has-file');
-    uploadText.textContent = `${file.name} (${result.count} questions)`;
+    uploadText.textContent = `${file.name} (${result.count}Q)`;
 
     // Load questions from the uploaded file
     loadDatasetQuestions(uploadedFilename);
     console.log(`Uploaded ${file.name}: ${result.count} questions`);
   } catch (e) {
     console.error('uploadDatasetFile error:', e);
-    uploadText.textContent = `Upload failed: ${e.message}`;
+    uploadText.textContent = `Failed: ${e.message}`;
     zone.classList.remove('has-file');
     resetQuestionDropdown();
   }
@@ -1345,7 +1557,7 @@ async function submitEval() {
     <div class="eval-columns">
       <div class="eval-col col-baseline">
         <div class="eval-col-header">
-          <span>⚡</span> Baseline (no retrieval)
+          <span>&#x26A1;</span> Baseline (no retrieval)
         </div>
         <div class="eval-col-body" id="eval-baseline">
           <div class="loading-bar"><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div></div>
@@ -1353,7 +1565,7 @@ async function submitEval() {
       </div>
       <div class="eval-col col-rag">
         <div class="eval-col-header">
-          <span>🔍</span> RAG (with retrieval)
+          <span>&#x1F50D;</span> RAG (with retrieval)
         </div>
         <div class="eval-col-body" id="eval-rag">
           <div style="color:var(--text-3);font-size:0.82rem">Waiting for baseline...</div>
@@ -1373,6 +1585,7 @@ async function submitEval() {
   let url = `/api/eval/stream?question=${encodeURIComponent(q.question)}`;
   url += `&reference_answer=${encodeURIComponent(refAnswer)}`;
   if (choices) url += `&answer_options=${encodeURIComponent(JSON.stringify(choices))}`;
+  if (selectedModel) url += `&model=${encodeURIComponent(selectedModel.model)}`;
 
   try {
     await consumeSSE(url, {
@@ -1406,24 +1619,22 @@ async function submitEval() {
           baselineText = text;
           baselineEl.innerHTML = renderMarkdown(baselineText);
           renderMathInElement(baselineEl);
-          // Add baseline badge
           if (isMCQ && choices) {
             const choice = extractChoice(text, Object.keys(choices));
             const correct = choice === refAnswer.toUpperCase();
             baselineEl.insertAdjacentHTML('beforeend',
-              `<div class="correct-badge ${correct ? 'badge-correct' : 'badge-incorrect'}">${correct ? '✓ Correct' : '✗ Incorrect'} — Answer: ${escapeHtml(choice)}</div>`
+              `<div class="correct-badge ${correct ? 'badge-correct' : 'badge-incorrect'}">${correct ? '&#x2713; Correct' : '&#x2717; Incorrect'} &mdash; Answer: ${escapeHtml(choice)}</div>`
             );
           }
         } else {
           ragText = text;
           ragEl.innerHTML = renderMarkdown(ragText);
           renderMathInElement(ragEl);
-          // Add RAG badge
           if (isMCQ && choices) {
             const choice = extractChoice(text, Object.keys(choices));
             const correct = choice === refAnswer.toUpperCase();
             ragEl.insertAdjacentHTML('beforeend',
-              `<div class="correct-badge ${correct ? 'badge-correct' : 'badge-incorrect'}">${correct ? '✓ Correct' : '✗ Incorrect'} — Answer: ${escapeHtml(choice)}</div>`
+              `<div class="correct-badge ${correct ? 'badge-correct' : 'badge-incorrect'}">${correct ? '&#x2713; Correct' : '&#x2717; Incorrect'} &mdash; Answer: ${escapeHtml(choice)}</div>`
             );
           }
         }
@@ -1469,13 +1680,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   resetQuestionDropdown();
   setupDragDrop();
+  loadModels();
 
   document.addEventListener('click', (event) => {
     if (!event.target.closest('.dropdown')) closeDropdowns();
+    if (!event.target.closest('.model-select-wrapper')) closeAllModelSelects();
   });
 
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') closeDropdowns();
+    if (event.key === 'Escape') {
+      closeDropdowns();
+      closeAllModelSelects();
+    }
   });
 });
 </script>
