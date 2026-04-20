@@ -1238,7 +1238,10 @@ async function submitQuery() {
 
   try {
     let url = `/api/query/stream?question=${encodeURIComponent(question)}`;
-    if (selectedModel) url += `&model=${encodeURIComponent(selectedModel.model)}`;
+    if (selectedModel) {
+      url += `&model=${encodeURIComponent(selectedModel.model)}`;
+      url += `&provider=${encodeURIComponent(selectedModel.provider)}`;
+    }
 
     await consumeSSE(url, {
       sources(sources) {
@@ -1585,7 +1588,10 @@ async function submitEval() {
   let url = `/api/eval/stream?question=${encodeURIComponent(q.question)}`;
   url += `&reference_answer=${encodeURIComponent(refAnswer)}`;
   if (choices) url += `&answer_options=${encodeURIComponent(JSON.stringify(choices))}`;
-  if (selectedModel) url += `&model=${encodeURIComponent(selectedModel.model)}`;
+  if (selectedModel) {
+    url += `&model=${encodeURIComponent(selectedModel.model)}`;
+    url += `&provider=${encodeURIComponent(selectedModel.provider)}`;
+  }
 
   try {
     await consumeSSE(url, {

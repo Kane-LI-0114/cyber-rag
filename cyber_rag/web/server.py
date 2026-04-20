@@ -234,11 +234,12 @@ async def stream_query(
     index_path: str = Query(default=str(DEFAULT_INDEX_DIR)),
     k: int = Query(default=4),
     model: str | None = Query(default=None),
+    provider: str | None = Query(default=None),
 ):
     """Stream a RAG query response with sources."""
     embedding_config = EmbeddingConfig()
     retrieval_config = RetrievalConfig(k=k)
-    generation_config = GenerationConfig(model_name=model)
+    generation_config = GenerationConfig(provider=provider, model_name=model)
 
     # Step 1: Retrieve documents (non-streaming)
     documents = retrieve_documents(
@@ -280,13 +281,14 @@ async def stream_eval(
     index_path: str = Query(default=str(DEFAULT_INDEX_DIR)),
     k: int = Query(default=4),
     model: str | None = Query(default=None),
+    provider: str | None = Query(default=None),
     answer_options: str | None = Query(default=None),
     reference_answer: str | None = Query(default=None),
 ):
     """Stream an evaluation: baseline then RAG, each with sources."""
     embedding_config = EmbeddingConfig()
     retrieval_config = RetrievalConfig(k=k)
-    generation_config = GenerationConfig(model_name=model)
+    generation_config = GenerationConfig(provider=provider, model_name=model)
 
     # Parse answer_options if provided (JSON string)
     options_dict = None
